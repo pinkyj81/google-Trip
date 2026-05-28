@@ -1,0 +1,3568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Places Finder</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <style>
+    :root {
+      --bg: #f2efe8;
+      --panel: rgba(255, 252, 247, 0.88);
+      --ink: #132a13;
+      --muted: #5d6655;
+      --accent: #c16630;
+      --accent-dark: #7f3b08;
+      --line: rgba(19, 42, 19, 0.12);
+      --shadow: 0 18px 40px rgba(61, 47, 34, 0.14);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Malgun Gothic", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(193, 102, 48, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(19, 42, 19, 0.12), transparent 24%),
+        linear-gradient(135deg, #f7f3ea 0%, #efe6da 52%, #e3dccf 100%);
+      min-height: 100vh;
+    }
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 56px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+    #searchArea {
+      display: none;
+    }
+    .hero-panel, .form-panel, .result-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+    }
+    .hero-panel {
+      padding: 30px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-panel::after {
+      content: "";
+      position: absolute;
+      right: -40px;
+      top: -40px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(193, 102, 48, 0.22), rgba(193, 102, 48, 0));
+    }
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(19, 42, 19, 0.07);
+      color: var(--accent-dark);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 16px 0 12px;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 0.98;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.7;
+      margin: 0;
+    }
+    .hero-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .hero-list span {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.54);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    .form-panel {
+      padding: 24px;
+    }
+    form {
+      display: grid;
+      gap: 14px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid rgba(19, 42, 19, 0.18);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 15px;
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+    }
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(19, 42, 19, 0.18);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 15px;
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      min-height: 92px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    input:focus, select:focus {
+      outline: 2px solid rgba(193, 102, 48, 0.25);
+      border-color: rgba(193, 102, 48, 0.5);
+    }
+    textarea:focus {
+      outline: 2px solid rgba(193, 102, 48, 0.25);
+      border-color: rgba(193, 102, 48, 0.5);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent) 0%, #a44f21 100%);
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 14px 28px rgba(127, 59, 8, 0.22);
+    }
+    button:hover { transform: translateY(-1px); }
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .secondary-btn {
+      background: linear-gradient(135deg, #4f772d 0%, #31572c 100%);
+      box-shadow: 0 14px 28px rgba(49, 87, 44, 0.2);
+    }
+    .table-btn {
+      background: linear-gradient(135deg, #355070 0%, #29405a 100%);
+      box-shadow: 0 14px 28px rgba(41, 64, 90, 0.2);
+    }
+    .raw-btn {
+      background: linear-gradient(135deg, #6a4c93 0%, #513374 100%);
+      box-shadow: 0 14px 28px rgba(81, 51, 116, 0.2);
+    }
+    .table-wrap {
+      margin-top: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .json-wrap {
+      margin-top: 14px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 18px;
+      border: 1px solid rgba(226, 232, 240, 0.15);
+      overflow: hidden;
+    }
+    .json-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.15);
+      font-size: 14px;
+      color: #cbd5e1;
+    }
+    .json-output {
+      margin: 0;
+      padding: 14px;
+      max-height: 520px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.45;
+      font-family: Consolas, 'Courier New', monospace;
+      white-space: pre;
+    }
+    .table-summary {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .table-scroll {
+      overflow: auto;
+      max-height: 520px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      background: #fff;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #f1ecdf;
+      color: #2e3b2e;
+      z-index: 1;
+    }
+    th, td {
+      border-bottom: 1px solid #ece8de;
+      text-align: left;
+      vertical-align: top;
+      font-size: 13px;
+      padding: 8px 10px;
+      white-space: nowrap;
+    }
+    td.long {
+      max-width: 280px;
+      white-space: normal;
+      line-height: 1.4;
+    }
+    .note {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0 14px;
+    }
+    .toolbar {
+      display: none;
+    }
+    .planner-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(420px, 0.95fr);
+      gap: 14px;
+      margin: 4px 0 22px;
+      align-items: start;
+    }
+    .planner-left {
+      display: grid;
+      gap: 14px;
+    }
+    .planner-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin: 0;
+    }
+    .planner-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .planner-title {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+    .planner-list {
+      margin-top: 12px;
+      max-height: 220px;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    #scheduleList {
+      max-height: none;
+      overflow: visible;
+    }
+    .planner-item {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .planner-item strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .drag-place-item {
+      cursor: grab;
+      user-select: none;
+    }
+    .place-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-height: 180px;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    .place-chip {
+      border: 1px solid rgba(193, 102, 48, 0.28);
+      background: rgba(255, 252, 247, 0.95);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 6px 28px 6px 11px;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+      box-shadow: none;
+      width: auto;
+      position: relative;
+      max-width: 100%;
+    }
+    .place-chip:hover {
+      transform: none;
+      background: #fff;
+    }
+    .place-chip-remove {
+      position: absolute;
+      right: 7px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #8b3f18;
+      background: rgba(193, 102, 48, 0.12);
+      cursor: pointer;
+      line-height: 1;
+    }
+    .place-chip-remove:hover {
+      background: rgba(193, 102, 48, 0.22);
+    }
+    .place-group {
+      width: 100%;
+      display: grid;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .place-group-title {
+      font-size: 12px;
+      color: #5f5a50;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .place-group-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .drag-place-item:active {
+      cursor: grabbing;
+    }
+    .drag-place-item.dragging {
+      opacity: 0.55;
+      transform: scale(0.99);
+    }
+    .timetable-wrap {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: auto;
+      background: #fff;
+    }
+    .timetable {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 420px;
+      table-layout: fixed;
+    }
+    .timetable th,
+    .timetable td {
+      border: 1px solid #d9d5cb;
+      padding: 5px 6px;
+      font-size: 13px;
+      vertical-align: top;
+      text-align: left;
+      min-width: 96px;
+    }
+    .timetable thead th {
+      background: #f1ecdf;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .timetable .time-col {
+      min-width: 54px;
+      width: 54px;
+      text-align: center;
+      white-space: nowrap;
+      background: #faf7f1;
+      font-weight: 700;
+    }
+    .timetable .selected-day {
+      background: #f8e8d8;
+    }
+    .timetable-cell-item {
+      background: rgba(193, 102, 48, 0.12);
+      border: 1px solid rgba(193, 102, 48, 0.2);
+      border-radius: 8px;
+      padding: 2px 6px;
+      margin-bottom: 4px;
+      display: block;
+      line-height: 1.35;
+    }
+    .timetable-cell-item.schedule-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .schedule-open-label {
+      color: inherit;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.35;
+      text-align: left;
+      flex: 1 1 auto;
+      min-width: 0;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .js-drag-schedule:hover .schedule-open-label {
+      text-decoration: underline;
+      text-decoration-color: rgba(154, 82, 36, 0.45);
+    }
+    .schedule-link-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      font-size: 12px;
+      color: #9a5224;
+      opacity: 0.9;
+      vertical-align: middle;
+    }
+    .timetable-cell-item.schedule-chip > span {
+      flex: 1 1 auto;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .timetable-cell-item.drag-schedule-item {
+      cursor: grab;
+      user-select: none;
+    }
+    .timetable-cell-item.drag-schedule-item:active {
+      cursor: grabbing;
+    }
+    .schedule-delete-btn {
+      border: 1px solid rgba(193, 102, 48, 0.35);
+      background: #fff;
+      color: #9a5224;
+      border-radius: 6px;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      line-height: 1;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: none;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+    .schedule-delete-btn:hover {
+      transform: none;
+      background: #fff4ec;
+    }
+    .timetable-drop-target {
+      min-height: 42px;
+      transition: background-color 0.15s ease, outline-color 0.15s ease;
+    }
+    .timetable-drop-target.drop-over {
+      outline: 2px dashed rgba(193, 102, 48, 0.7);
+      outline-offset: -2px;
+      background: rgba(255, 232, 212, 0.7);
+    }
+    .timetable-drop-hint {
+      font-size: 12px;
+      color: #8d856f;
+      display: block;
+    }
+    .schedule-map-wrap {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .schedule-map-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f7f3ea;
+      font-size: 13px;
+      color: #5f5a50;
+    }
+    .schedule-map {
+      width: 100%;
+      height: 320px;
+      background: #f4efe6;
+    }
+    .planner-map-card {
+      padding: 12px;
+    }
+    .planner-map-card .schedule-map-wrap {
+      margin-top: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .planner-map-card .schedule-map {
+      flex: 1 1 auto;
+      min-height: 320px;
+      height: 320px;
+    }
+    .map-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+    .map-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(19, 42, 19, 0.12);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #4f5a4f;
+      background: #fff;
+    }
+    .map-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(19, 42, 19, 0.25);
+    }
+    .map-pin-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px rgba(19, 42, 19, 0.35);
+      display: block;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .results {
+      display: grid;
+      gap: 14px;
+    }
+    .result-card {
+      padding: 20px 22px;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: rise 0.34s ease forwards;
+    }
+    .place-photo {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      margin-bottom: 14px;
+      background: #ebe5d8;
+    }
+    .result-card:nth-child(2) { animation-delay: 0.04s; }
+    .result-card:nth-child(3) { animation-delay: 0.08s; }
+    .result-card:nth-child(4) { animation-delay: 0.12s; }
+    @keyframes rise {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+    }
+    .title {
+      font-size: 24px;
+      margin: 0 0 8px;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 0;
+    }
+    .badge {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(19, 42, 19, 0.08);
+      font-size: 13px;
+    }
+    .rating {
+      white-space: nowrap;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent-dark);
+    }
+    .address {
+      margin: 12px 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .links a {
+      color: var(--accent-dark);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .trip-save-btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 10px 16px rgba(27, 67, 50, 0.22);
+    }
+    .mini-btn {
+      border: 1px solid #e9e1e6;
+      border-radius: 7px;
+      width: 34px;
+      height: 30px;
+      padding: 0;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #6f6f78;
+      background: #f7f6f8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mini-btn.cancel {
+      background: #6c757d;
+    }
+    .mini-btn.danger {
+      border-color: #f4d4db;
+      background: #fcecef;
+      color: #ea6f84;
+    }
+    .mini-btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    .trip-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .planner-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .trip-meta {
+      color: #4f5a4f;
+      font-size: 13px;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .trip-title-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+    }
+    .trip-open-manage-btn {
+      border-radius: 10px;
+      min-height: 36px;
+      padding: 8px 12px;
+      white-space: nowrap;
+      box-shadow: 0 10px 16px rgba(127, 59, 8, 0.2);
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent) 0%, #a44f21 100%);
+    }
+    .trip-open-manage-btn:hover {
+      transform: translateY(-1px);
+    }
+    .trip-select-inline {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .trip-select-inline button {
+      white-space: nowrap;
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .trip-flight-summary {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border: 1px solid #e2d7c8;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 13px;
+      line-height: 1.45;
+      color: #4b5348;
+    }
+    .trip-flight-summary strong {
+      color: var(--ink);
+    }
+    .trip-create-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .trip-submit-wrap {
+      display: flex;
+      align-items: end;
+    }
+    .trip-submit-wrap button {
+      border-radius: 12px;
+      padding: 12px 16px;
+      white-space: nowrap;
+      min-height: 48px;
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .modal[hidden] {
+      display: none !important;
+    }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(18, 24, 18, 0.45);
+    }
+    .modal-panel {
+      position: relative;
+      width: min(920px, calc(100% - 12px));
+      max-height: 88vh;
+      overflow: auto;
+      background: #f6f2ea;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .modal-form {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .modal-results {
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .manual-place-box {
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid #ddd6c9;
+      border-radius: 12px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+    }
+    .manual-place-box h4 {
+      margin: 0;
+      font-size: 14px;
+    }
+    .manual-place-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .manual-place-maps-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+    .manual-place-maps-actions button {
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      box-shadow: none;
+      background: linear-gradient(135deg, #355070 0%, #29405a 100%);
+    }
+    .manual-place-box button {
+      justify-self: end;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      box-shadow: none;
+    }
+    .picker-card {
+      border: 1px solid #ddd6c9;
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+    }
+    .picker-photo {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #e4dccf;
+      margin-bottom: 8px;
+      background: #eee7db;
+    }
+    .picker-card.active {
+      border-color: #c16630;
+      box-shadow: 0 0 0 2px rgba(193, 102, 48, 0.18);
+    }
+    .picker-check-btn {
+      border: 1px solid #d7cabc;
+      border-radius: 6px;
+      width: 28px;
+      height: 24px;
+      padding: 0;
+      line-height: 1;
+      font-size: 16px;
+      font-weight: 700;
+      color: #5d6655;
+      background: #fff;
+      box-shadow: none;
+      cursor: pointer;
+    }
+    .picker-check-btn:hover {
+      transform: none;
+      background: #fff8f2;
+    }
+    .trip-manage-panel {
+      width: min(560px, calc(100% - 12px));
+      background: #f8f4ec;
+    }
+    .trip-manage-panel .trip-create-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .trip-manage-panel .trip-submit-wrap {
+      grid-column: 1 / -1;
+    }
+    .trip-manage-panel .trip-submit-wrap button {
+      width: 100%;
+    }
+    .trip-manage-list {
+      display: grid;
+      gap: 10px;
+      max-height: 58vh;
+      overflow: auto;
+      padding-right: 2px;
+    }
+    .trip-modal-card {
+      border: 1px solid #ddd6c9;
+      border-radius: 14px;
+      background: #fff;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .trip-modal-title {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+    .trip-modal-meta {
+      margin-top: 10px;
+      color: #465246;
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: normal;
+      word-break: keep-all;
+    }
+    .trip-modal-action-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .note-link-row {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .note-place-summary {
+      display: grid;
+      gap: 8px;
+      border: 1px solid #e2d7c8;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.72);
+      padding: 12px;
+    }
+    .note-place-summary-item {
+      display: grid;
+      gap: 4px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .note-place-summary-item strong {
+      font-size: 15px;
+    }
+    .note-place-summary-item a {
+      color: #355070;
+      word-break: break-all;
+    }
+    .note-preview-wrap {
+      display: grid;
+      gap: 6px;
+    }
+    .note-preview {
+      border: 1px solid #e2d7c8;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.78);
+      padding: 12px;
+      min-height: 56px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .note-preview a {
+      color: #355070;
+      text-decoration: underline;
+    }
+    .note-link-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .note-link-open-btn {
+      background: linear-gradient(135deg, #355070 0%, #29405a 100%);
+      box-shadow: 0 14px 28px rgba(41, 64, 90, 0.2);
+    }
+    .trip-modal-edit-btn,
+    .trip-modal-delete-btn {
+      border: 1px solid #e9e1e6;
+      border-radius: 10px;
+      width: 40px;
+      height: 36px;
+      padding: 0;
+      box-shadow: none;
+      font-size: 17px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .trip-modal-edit-btn {
+      color: #6f6f78;
+      background: #f7f6f8;
+    }
+    .trip-modal-delete-btn {
+      border-color: #f4d4db;
+      color: #ea6f84;
+      background: #fcecef;
+    }
+    .empty, .error {
+      padding: 22px;
+      border-radius: 22px;
+      background: rgba(255, 252, 247, 0.72);
+      border: 1px dashed var(--line);
+      color: var(--muted);
+    }
+    #messageBox {
+      display: none !important;
+    }
+    .error {
+      color: #8a1c1c;
+      border-style: solid;
+      border-color: rgba(138, 28, 28, 0.18);
+      background: rgba(255, 240, 238, 0.9);
+    }
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+      .planner-layout {
+        grid-template-columns: 1fr;
+      }
+      .planner-grid {
+        grid-template-columns: 1fr;
+      }
+      .planner-map-card .schedule-map-wrap {
+        min-height: 0;
+      }
+      .planner-map-card .schedule-map {
+        min-height: 320px;
+      }
+    }
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100% - 18px, 1120px);
+        padding-top: 18px;
+      }
+      .hero-panel, .form-panel, .result-card {
+        border-radius: 22px;
+      }
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .trip-date-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .trip-create-row {
+        grid-template-columns: 1fr;
+      }
+      .trip-title-row {
+        grid-template-columns: 1fr;
+      }
+      .trip-submit-wrap button {
+        width: 100%;
+      }
+      .result-head {
+        flex-direction: column;
+      }
+      .action-row {
+        grid-template-columns: 1fr;
+      }
+      .timetable th,
+      .timetable td {
+        min-width: 88px;
+        font-size: 12px;
+        padding: 4px 5px;
+      }
+      .timetable .time-col {
+        min-width: 50px;
+        width: 50px;
+        font-size: 11px;
+      }
+      .timetable-cell-item {
+        padding: 1px 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section id="searchArea" class="hero">
+      <div class="hero-panel">
+        <span class="eyebrow">Google Places API</span>
+        <h1>장소 검색 Flask 데모</h1>
+        <p>검색어만으로 텍스트 검색을 하거나, 위도와 경도를 같이 넣어서 특정 위치 주변의 카페, 음식점, 관광지 같은 장소를 탐색할 수 있습니다.</p>
+        <div class="hero-list">
+          <span>텍스트 검색</span>
+          <span>위치 중심 검색</span>
+          <span>평점/영업 상태 표시</span>
+          <span>Google Maps 바로가기</span>
+        </div>
+      </div>
+      <div class="form-panel">
+        <form id="searchForm">
+          <div>
+            <label for="countryCode">국가 선택</label>
+            <select id="countryCode" name="country_code" required>
+              <option value="">전체 국가</option>
+              <option value="KR">대한민국 (KR)</option>
+              <option value="FR">프랑스 (FR)</option>
+              <option value="JP">일본 (JP)</option>
+              <option value="US">미국 (US)</option>
+              <option value="GB">영국 (GB)</option>
+              <option value="IT">이탈리아 (IT)</option>
+              <option value="ES">스페인 (ES)</option>
+              <option value="DE">독일 (DE)</option>
+              <option value="TH">태국 (TH)</option>
+            </select>
+          </div>
+          <div>
+            <label for="citySelect">도시 선택</label>
+            <select id="citySelect" name="city_name" required>
+              <option value="">도시를 선택하세요</option>
+            </select>
+          </div>
+          <div>
+            <label for="placeCategory">장소 카테고리</label>
+            <select id="placeCategory" name="place_category" required>
+              <option value="">전체 카테고리</option>
+              <option value="tourist_attraction">주요 관광 명소</option>
+              <option value="historical_landmark">LANDMARK</option>
+              <option value="lodging">HOTEL / LODGING</option>
+              <option value="restaurant">RESTAURANT</option>
+              <option value="cafe">CAFE</option>
+              <option value="museum">MUSEUM</option>
+              <option value="park">PARK</option>
+              <option value="point_of_interest">POINT OF INTEREST</option>
+            </select>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label for="latitude">위도</label>
+              <input id="latitude" name="latitude" placeholder="예: 37.4979">
+            </div>
+            <div>
+              <label for="longitude">경도</label>
+              <input id="longitude" name="longitude" placeholder="예: 127.0276">
+            </div>
+          </div>
+          <div>
+            <label for="radius">반경(m)</label>
+            <input id="radius" name="radius" type="number" min="100" max="50000" value="3000">
+          </div>
+          <div class="action-row">
+            <button type="submit">조회</button>
+            <button type="button" id="autoRecommendBtn" class="secondary-btn">관광지 자동 추천</button>
+            <button type="button" id="tableInspectBtn" class="table-btn">API 테이블 보기</button>
+            <button type="button" id="rawJsonBtn" class="raw-btn">전체 JSON (100개)</button>
+          </div>
+          <div>
+            <label for="maxPages">테이블 조회 페이지 수</label>
+            <select id="maxPages" name="max_pages">
+              <option value="1">1페이지</option>
+              <option value="2">2페이지</option>
+              <option value="3" selected>3페이지</option>
+              <option value="4">4페이지</option>
+              <option value="5">5페이지</option>
+            </select>
+          </div>
+          <div class="note">나라, 도시, 카테고리를 선택하고 조회를 누르면 선택값 기준으로 장소 사진 리스트를 불러옵니다. 위도/경도는 현재 텍스트 검색에서는 사용되지 않습니다.</div>
+        </form>
+      </div>
+    </section>
+
+    <section class="planner-layout">
+      <article id="schedulePlannerCard" class="planner-card">
+        <div class="planner-title-row">
+          <h2 class="planner-title" style="margin:0;">My itinerary</h2>
+          <button id="openTripManageBtn" type="button" class="trip-open-manage-btn">여행만들기</button>
+        </div>
+        <form id="tripPlaceForm">
+          <div>
+            <label for="tripSelectForPlace">여행 선택</label>
+            <div class="trip-select-inline">
+              <select id="tripSelectForPlace" required>
+                <option value="">여행을 먼저 생성하세요</option>
+              </select>
+              <button type="button" id="openPhotoPickerBtn">사진 보기</button>
+            </div>
+            <div id="tripFlightSummary" class="trip-flight-summary">선택한 여행의 비행기 정보가 여기에 표시됩니다.</div>
+          </div>
+        </form>
+        <div id="tripPlaceList" class="planner-list place-chip-list"></div>
+        <form id="scheduleForm">
+          <select id="tripSelectForSchedule" required hidden>
+            <option value="">여행을 선택하세요</option>
+          </select>
+          <select id="scheduleDate" hidden>
+            <option value="">전체 날짜</option>
+          </select>
+          <select id="schedulePlace" hidden>
+            <option value="">장소함에서 선택</option>
+          </select>
+          <div>
+            <select id="scheduleTime" hidden>
+              <option value="09:00">09:00</option>
+              <option value="10:00" selected>10:00</option>
+              <option value="11:00">11:00</option>
+              <option value="12:00">12:00</option>
+              <option value="13:00">13:00</option>
+              <option value="14:00">14:00</option>
+              <option value="15:00">15:00</option>
+              <option value="16:00">16:00</option>
+              <option value="17:00">17:00</option>
+              <option value="18:00">18:00</option>
+              <option value="19:00">19:00</option>
+              <option value="20:00">20:00</option>
+              <option value="21:00">21:00</option>
+              <option value="22:00">22:00</option>
+              <option value="23:00">23:00</option>
+            </select>
+          </div>
+        </form>
+        <div id="scheduleList" class="planner-list"></div>
+      </article>
+
+      <aside id="scheduleMapCard" class="planner-card planner-map-card">
+        <div class="schedule-map-wrap">
+          <div class="schedule-map-head">
+            <strong>일정 지도 보기</strong>
+            <span id="scheduleMapStatus">일정을 추가하면 지도에 표시됩니다.</span>
+          </div>
+          <div id="scheduleMap" class="schedule-map"></div>
+          <div id="scheduleMapLegend" class="map-legend"></div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="toolbar">
+      <div class="status" id="statusText">검색 결과가 여기에 표시됩니다.</div>
+    </div>
+
+    <section id="messageBox" class="empty">검색어를 입력하고 장소를 찾아보세요.</section>
+    <section id="results" class="results"></section>
+    <section id="tableWrap" class="table-wrap" hidden>
+      <div id="tableSummary" class="table-summary"></div>
+      <div class="table-scroll">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+    <section id="jsonWrap" class="json-wrap" hidden>
+      <div id="jsonHead" class="json-head">JSON 출력</div>
+      <pre id="jsonOutput" class="json-output"></pre>
+    </section>
+
+    <section id="photoPickerModal" class="modal" hidden>
+      <div class="modal-backdrop" id="photoPickerBackdrop"></div>
+      <div class="modal-panel">
+        <div class="modal-head">
+          <strong id="photoPickerTripLabel">여행 사진 선택</strong>
+          <div class="modal-actions">
+            <button type="button" id="savePickedPlaceBtn">저장하기</button>
+            <button type="button" id="closePhotoPickerBtn" class="mini-btn cancel" aria-label="닫기">✕</button>
+          </div>
+        </div>
+        <form id="photoPickerSearchForm" class="modal-form">
+          <div>
+            <label for="modalCountry">국가 선택</label>
+            <select id="modalCountry" required>
+              <option value="">국가를 선택하세요</option>
+              <option value="KR">대한민국 (KR)</option>
+              <option value="FR">프랑스 (FR)</option>
+              <option value="JP">일본 (JP)</option>
+              <option value="US">미국 (US)</option>
+              <option value="GB">영국 (GB)</option>
+              <option value="IT">이탈리아 (IT)</option>
+              <option value="ES">스페인 (ES)</option>
+              <option value="DE">독일 (DE)</option>
+              <option value="TH">태국 (TH)</option>
+            </select>
+          </div>
+          <div>
+            <label for="modalCitySelect">도시 선택</label>
+            <select id="modalCitySelect" required>
+              <option value="">도시를 선택하세요</option>
+            </select>
+          </div>
+          <div>
+            <label for="modalCategory">카테고리 선택</label>
+            <select id="modalCategory" required>
+              <option value="">카테고리를 선택하세요</option>
+              <option value="tourist_attraction">관광명소</option>
+              <option value="historical_landmark">랜드마크</option>
+              <option value="museum">박물관</option>
+              <option value="park">공원</option>
+              <option value="lodging">호텔/숙소</option>
+              <option value="restaurant">식당</option>
+              <option value="cafe">카페</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="submit">검색</button>
+          </div>
+        </form>
+        <div id="photoPickerStatus" class="note">검색 후 장소를 선택하세요.</div>
+        <div class="manual-place-box">
+          <h4>원하는 장소 직접 입력</h4>
+          <div>
+            <label for="manualPlaceMaps">Google Maps 링크(먼저 입력)</label>
+            <input id="manualPlaceMaps" placeholder="https://maps.google.com/..." />
+            <div class="note">링크 자동 채우기 후, 비어 있는 항목만 직접 보완해 주세요.</div>
+            <div class="manual-place-maps-actions">
+              <button type="button" id="fillManualFromMapsBtn">링크로 자동 채우기</button>
+            </div>
+          </div>
+          <div>
+            <label for="manualPlaceCategory">구분</label>
+            <select id="manualPlaceCategory">
+              <option value="tourist_attraction">관광명소</option>
+              <option value="lodging">호텔/숙소</option>
+              <option value="restaurant">식당</option>
+              <option value="cafe">카페</option>
+              <option value="point_of_interest">기타</option>
+            </select>
+          </div>
+          <div>
+            <label for="manualPlaceName">장소명</label>
+            <input id="manualPlaceName" placeholder="예: 오도리 공원" />
+          </div>
+          <div>
+            <label for="manualPlaceAddress">주소</label>
+            <input id="manualPlaceAddress" placeholder="예: 일본 홋카이도 삿포로시 ..." />
+          </div>
+          <div class="manual-place-grid">
+            <div>
+              <label for="manualPlaceLat">위도(선택)</label>
+              <input id="manualPlaceLat" placeholder="43.0618" />
+            </div>
+            <div>
+              <label for="manualPlaceLng">경도(선택)</label>
+              <input id="manualPlaceLng" placeholder="141.3545" />
+            </div>
+          </div>
+          <button type="button" id="saveManualPlaceBtn">직접 입력 저장</button>
+        </div>
+        <div id="photoPickerResults" class="modal-results"></div>
+      </div>
+    </section>
+
+    <section id="tripManageModal" class="modal" hidden>
+      <div class="modal-backdrop" id="tripManageBackdrop"></div>
+      <div class="modal-panel trip-manage-panel">
+        <div class="modal-head">
+          <strong>여행 만들기/관리</strong>
+          <button type="button" id="closeTripManageBtn" class="mini-btn cancel" aria-label="닫기">✕</button>
+        </div>
+        <form id="tripForm">
+          <input id="tripEditId" type="hidden" value="">
+          <div>
+            <label for="tripTitle">여행 제목</label>
+            <input id="tripTitle" name="title" placeholder="예: 파리여행" required>
+          </div>
+          <div>
+            <label for="tripFlightInfo">비행기 정보(선택)</label>
+            <textarea id="tripFlightInfo" name="flight_info" rows="2" placeholder="예: KE765 인천 10:30 -> 신치토세 13:05"></textarea>
+          </div>
+          <div class="trip-create-row">
+            <div>
+              <label for="tripStart">시작일</label>
+              <input id="tripStart" name="start_date" type="date" required>
+            </div>
+            <div>
+              <label for="tripEnd">종료일</label>
+              <input id="tripEnd" name="end_date" type="date" required>
+            </div>
+            <div class="trip-submit-wrap">
+              <button id="tripSubmitBtn" type="submit">여행 생성</button>
+            </div>
+          </div>
+          <button id="tripCancelEditBtn" type="button" hidden>수정 취소</button>
+        </form>
+        <div id="tripManageBody" class="trip-manage-list"></div>
+      </div>
+    </section>
+
+    <section id="scheduleNoteModal" class="modal" hidden>
+      <div class="modal-backdrop" id="scheduleNoteBackdrop"></div>
+      <div class="modal-panel trip-manage-panel">
+        <div class="modal-head">
+          <strong id="scheduleNoteTitle">일정 메모</strong>
+          <button type="button" id="closeScheduleNoteBtn" class="mini-btn cancel" aria-label="닫기">✕</button>
+        </div>
+        <div class="note-link-row">
+          <div id="scheduleNotePlaceSummary" class="note-place-summary"></div>
+          <div>
+            <label for="scheduleNoteMemo">메모</label>
+            <textarea id="scheduleNoteMemo" placeholder="메모를 입력하세요"></textarea>
+          </div>
+          <div class="note-preview-wrap">
+            <label>메모 미리보기</label>
+            <div id="scheduleNotePreview" class="note-preview"></div>
+          </div>
+          <div class="note-link-actions">
+            <button type="button" id="saveScheduleNoteBtn">저장</button>
+            <button type="button" id="openScheduleLinkBtn" class="note-link-open-btn">메모 링크 열기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    const searchForm = document.getElementById('searchForm');
+    const results = document.getElementById('results');
+    const messageBox = document.getElementById('messageBox');
+    const statusText = document.getElementById('statusText');
+    const countryCodeSelect = document.getElementById('countryCode');
+    const citySelect = document.getElementById('citySelect');
+    const placeCategorySelect = document.getElementById('placeCategory');
+    const autoRecommendBtn = document.getElementById('autoRecommendBtn');
+    const tableInspectBtn = document.getElementById('tableInspectBtn');
+    const rawJsonBtn = document.getElementById('rawJsonBtn');
+    const tableWrap = document.getElementById('tableWrap');
+    const tableSummary = document.getElementById('tableSummary');
+    const tableHead = document.getElementById('tableHead');
+    const tableBody = document.getElementById('tableBody');
+    const jsonWrap = document.getElementById('jsonWrap');
+    const jsonHead = document.getElementById('jsonHead');
+    const jsonOutput = document.getElementById('jsonOutput');
+
+    const tripForm = document.getElementById('tripForm');
+    const tripEditId = document.getElementById('tripEditId');
+    const tripSubmitBtn = document.getElementById('tripSubmitBtn');
+    const tripCancelEditBtn = document.getElementById('tripCancelEditBtn');
+    const openTripManageBtn = document.getElementById('openTripManageBtn');
+    const tripPlaceForm = document.getElementById('tripPlaceForm');
+    const scheduleForm = document.getElementById('scheduleForm');
+    const tripSelectForPlace = document.getElementById('tripSelectForPlace');
+    const tripSelectForSchedule = document.getElementById('tripSelectForSchedule');
+    const tripFlightSummary = document.getElementById('tripFlightSummary');
+    const scheduleDate = document.getElementById('scheduleDate');
+    const schedulePlace = document.getElementById('schedulePlace');
+    const scheduleTime = document.getElementById('scheduleTime');
+    const tripList = document.getElementById('tripList');
+    const tripPlaceList = document.getElementById('tripPlaceList');
+    const scheduleList = document.getElementById('scheduleList');
+    const openPhotoPickerBtn = document.getElementById('openPhotoPickerBtn');
+    const photoPickerModal = document.getElementById('photoPickerModal');
+    const photoPickerBackdrop = document.getElementById('photoPickerBackdrop');
+    const closePhotoPickerBtn = document.getElementById('closePhotoPickerBtn');
+    const savePickedPlaceBtn = document.getElementById('savePickedPlaceBtn');
+    const photoPickerTripLabel = document.getElementById('photoPickerTripLabel');
+    const photoPickerSearchForm = document.getElementById('photoPickerSearchForm');
+    const photoPickerStatus = document.getElementById('photoPickerStatus');
+    const photoPickerResults = document.getElementById('photoPickerResults');
+    const manualPlaceName = document.getElementById('manualPlaceName');
+    const manualPlaceAddress = document.getElementById('manualPlaceAddress');
+    const manualPlaceMaps = document.getElementById('manualPlaceMaps');
+    const manualPlaceCategory = document.getElementById('manualPlaceCategory');
+    const manualPlaceLat = document.getElementById('manualPlaceLat');
+    const manualPlaceLng = document.getElementById('manualPlaceLng');
+    const fillManualFromMapsBtn = document.getElementById('fillManualFromMapsBtn');
+    const saveManualPlaceBtn = document.getElementById('saveManualPlaceBtn');
+    const tripManageModal = document.getElementById('tripManageModal');
+    const tripManageBackdrop = document.getElementById('tripManageBackdrop');
+    const closeTripManageBtn = document.getElementById('closeTripManageBtn');
+    const tripManageBody = document.getElementById('tripManageBody');
+    const scheduleNoteModal = document.getElementById('scheduleNoteModal');
+    const scheduleNoteBackdrop = document.getElementById('scheduleNoteBackdrop');
+    const closeScheduleNoteBtn = document.getElementById('closeScheduleNoteBtn');
+    const scheduleNoteTitle = document.getElementById('scheduleNoteTitle');
+    const scheduleNoteMemo = document.getElementById('scheduleNoteMemo');
+    const scheduleNotePreview = document.getElementById('scheduleNotePreview');
+    const scheduleNotePlaceSummary = document.getElementById('scheduleNotePlaceSummary');
+    const saveScheduleNoteBtn = document.getElementById('saveScheduleNoteBtn');
+    const openScheduleLinkBtn = document.getElementById('openScheduleLinkBtn');
+    const scheduleMapEl = document.getElementById('scheduleMap');
+    const scheduleMapLegend = document.getElementById('scheduleMapLegend');
+    const scheduleMapStatus = document.getElementById('scheduleMapStatus');
+    const schedulePlannerCard = document.getElementById('schedulePlannerCard');
+    const scheduleMapCard = document.getElementById('scheduleMapCard');
+    const scheduleMapWrap = scheduleMapCard ? scheduleMapCard.querySelector('.schedule-map-wrap') : null;
+    const scheduleMapHead = scheduleMapCard ? scheduleMapCard.querySelector('.schedule-map-head') : null;
+    const modalCountry = document.getElementById('modalCountry');
+    const modalCitySelect = document.getElementById('modalCitySelect');
+    const modalCategory = document.getElementById('modalCategory');
+    const TIMETABLE_HOURS = [
+      '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00',
+      '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
+    ];
+    let cachedTrips = [];
+    let cachedTripPlaces = [];
+    let scheduledTripPlaceIds = new Set();
+    let activeDragPayload = null;
+    let scheduleMap = null;
+    let scheduleMapLayer = null;
+    const geocodeCache = new Map();
+    let selectedPickedPlaces = new Map();
+    let currentScheduleItems = [];
+    let editingScheduleId = null;
+    let currentScheduleNoteItem = null;
+    let scheduleMapSyncRaf = 0;
+    let scheduleCardResizeObserver = null;
+
+    function parseScheduleNote(rawNote) {
+      const text = String(rawNote || '').trim();
+      if (!text) {
+        return { memo: '' };
+      }
+
+      const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+      const memoLine = lines.find((line) => line.startsWith('[MEMO]'));
+      if (memoLine) {
+        return { memo: memoLine.replace(/^\[MEMO\]/, '').trim() };
+      }
+
+      const filtered = lines.filter((line) => !line.startsWith('[LINK]'));
+      return { memo: filtered.join('\n') || text };
+    }
+
+    function escapeAttribute(value) {
+      return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function extractUrls(text) {
+      const source = String(text || '');
+      const matches = source.match(/https?:\/\/[^\s<>"]+/gi);
+      return matches ? Array.from(new Set(matches.map((item) => item.trim()))) : [];
+    }
+
+    function linkifyText(text) {
+      const source = String(text || '');
+      const escaped = escapeHtml(source);
+      return escaped.replace(/https?:\/\/[^\s<>"]+/gi, (match) => {
+        const safeHref = escapeAttribute(match);
+        const safeText = escapeHtml(match);
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeText}</a>`;
+      });
+    }
+
+    function renderScheduleNotePreview(text) {
+      const content = String(text || '').trim();
+      if (!scheduleNotePreview) {
+        return;
+      }
+      if (!content) {
+        scheduleNotePreview.innerHTML = '<span class="empty-note">메모가 비어 있습니다.</span>';
+        return;
+      }
+      scheduleNotePreview.innerHTML = linkifyText(content).replace(/\n/g, '<br>');
+    }
+
+    function renderSchedulePlaceSummary(item) {
+      if (!scheduleNotePlaceSummary) {
+        return;
+      }
+      const name = escapeHtml(item?.place_name || '');
+      const address = escapeHtml(item?.formatted_address || '');
+      const googleMapsUri = String(item?.google_maps_uri || '').trim();
+      const googleMapsHtml = googleMapsUri
+        ? `<a href="${escapeAttribute(googleMapsUri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(googleMapsUri)}</a>`
+        : '<span class="empty-note">구글맵 링크 없음</span>';
+
+      scheduleNotePlaceSummary.innerHTML = `
+        <div class="note-place-summary-item"><span>이름</span><strong>${name || '<span class="empty-note">정보 없음</span>'}</strong></div>
+        <div class="note-place-summary-item"><span>주소</span><div>${address || '<span class="empty-note">정보 없음</span>'}</div></div>
+        <div class="note-place-summary-item"><span>구글맵 정보</span><div>${googleMapsHtml}</div></div>
+      `;
+    }
+
+    function closeScheduleNoteModal() {
+      if (scheduleNoteModal) {
+        scheduleNoteModal.hidden = true;
+      }
+      editingScheduleId = null;
+      currentScheduleNoteItem = null;
+      scheduleNoteMemo.value = '';
+      renderScheduleNotePreview('');
+      if (scheduleNotePlaceSummary) {
+        scheduleNotePlaceSummary.innerHTML = '';
+      }
+    }
+
+    function openScheduleNoteModal(scheduleId) {
+      const selectedId = Number(scheduleId);
+      const item = currentScheduleItems.find((x) => Number(x.id) === selectedId);
+      if (!item) {
+        statusText.textContent = '선택한 일정 정보를 찾지 못했습니다.';
+        return;
+      }
+
+      editingScheduleId = selectedId;
+      currentScheduleNoteItem = item;
+      const parsed = parseScheduleNote(item.note);
+      scheduleNoteTitle.textContent = `일정 메모: ${item.place_name || ''}`;
+      scheduleNoteMemo.value = parsed.memo;
+      renderSchedulePlaceSummary(item);
+      renderScheduleNotePreview(parsed.memo);
+      scheduleNoteModal.hidden = false;
+    }
+
+    function normalizeExternalUrl(rawUrl) {
+      const text = String(rawUrl || '').trim();
+      if (!text) {
+        return '';
+      }
+      if (/^https?:\/\//i.test(text)) {
+        return text;
+      }
+      return `https://${text}`;
+    }
+
+    function openScheduleLinkNow() {
+      const memoUrls = extractUrls(scheduleNoteMemo.value);
+      const fallbackUrl = String(currentScheduleNoteItem?.google_maps_uri || '').trim();
+      const url = normalizeExternalUrl(memoUrls[0] || fallbackUrl);
+      if (!url) {
+        statusText.textContent = '메모 안에 링크가 없고, 구글맵 정보도 없습니다.';
+        return;
+      }
+
+      try {
+        const parsed = new URL(url);
+        window.open(parsed.toString(), '_blank', 'noopener');
+      } catch {
+        statusText.textContent = '링크 형식이 올바르지 않습니다.';
+      }
+    }
+
+    async function saveScheduleNote() {
+      if (!editingScheduleId) {
+        return;
+      }
+
+      const item = currentScheduleItems.find((x) => Number(x.id) === Number(editingScheduleId));
+      if (!item) {
+        statusText.textContent = '저장할 일정 정보를 찾지 못했습니다.';
+        return;
+      }
+
+      const nextNote = String(scheduleNoteMemo.value || '').trim();
+
+      const response = await fetch(`/api/trip-schedule/${encodeURIComponent(editingScheduleId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule_date: normalizeDateKey(item.schedule_date),
+          schedule_time: normalizeTimeKey(item.schedule_time),
+          note: nextNote
+        })
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '일정 메모 저장 실패');
+      }
+
+      await loadTripScheduleByTrip(String(item.trip_id || tripSelectForSchedule.value || tripSelectForPlace.value || ''), scheduleDate.value || '');
+      statusText.textContent = '일정 메모 저장 완료';
+      closeScheduleNoteModal();
+    }
+
+    function syncScheduleMapHeight() {
+      if (!schedulePlannerCard || !scheduleMapCard || !scheduleMapWrap || !scheduleMapEl) {
+        return;
+      }
+
+      const isDesktop = window.matchMedia('(min-width: 901px)').matches;
+      if (!isDesktop) {
+        scheduleMapCard.style.height = '';
+        scheduleMapWrap.style.height = '';
+        scheduleMapEl.style.height = '';
+        if (scheduleMap) {
+          scheduleMap.invalidateSize();
+        }
+        return;
+      }
+
+      const targetHeight = Math.ceil(schedulePlannerCard.getBoundingClientRect().height);
+      if (!Number.isFinite(targetHeight) || targetHeight <= 0) {
+        return;
+      }
+
+      scheduleMapCard.style.height = `${targetHeight}px`;
+      scheduleMapWrap.style.height = 'calc(100% - 24px)';
+
+      const headHeight = scheduleMapHead ? scheduleMapHead.getBoundingClientRect().height : 0;
+      const legendHeight = scheduleMapLegend ? scheduleMapLegend.getBoundingClientRect().height : 0;
+      const mapHeight = Math.max(320, Math.floor(targetHeight - 24 - headHeight - legendHeight - 2));
+      scheduleMapEl.style.height = `${mapHeight}px`;
+
+      if (scheduleMap) {
+        scheduleMap.invalidateSize();
+      }
+    }
+
+    function requestScheduleMapHeightSync() {
+      if (scheduleMapSyncRaf) {
+        cancelAnimationFrame(scheduleMapSyncRaf);
+      }
+      scheduleMapSyncRaf = requestAnimationFrame(() => {
+        scheduleMapSyncRaf = 0;
+        syncScheduleMapHeight();
+      });
+    }
+
+    function getDateColor(index, total) {
+      const safeTotal = Math.max(total, 1);
+      const hue = Math.round((index * 360) / safeTotal);
+      return `hsl(${hue} 62% 62%)`;
+    }
+
+    function parseGoogleMapsCoordinates(uri) {
+      const text = String(uri || '');
+      if (!text) {
+        return null;
+      }
+
+      let match = text.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+      if (match) {
+        return { lat: Number(match[1]), lng: Number(match[2]) };
+      }
+
+      match = text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+      if (match) {
+        return { lat: Number(match[1]), lng: Number(match[2]) };
+      }
+
+      return null;
+    }
+
+    async function geocodeAddress(address) {
+      const query = String(address || '').trim();
+      if (!query) {
+        return null;
+      }
+      if (geocodeCache.has(query)) {
+        return geocodeCache.get(query);
+      }
+
+      const endpoint = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
+      try {
+        const response = await fetch(endpoint, {
+          headers: {
+            Accept: 'application/json'
+          }
+        });
+        if (!response.ok) {
+          geocodeCache.set(query, null);
+          return null;
+        }
+        const rows = await response.json();
+        if (!Array.isArray(rows) || !rows.length) {
+          geocodeCache.set(query, null);
+          return null;
+        }
+        const result = {
+          lat: Number(rows[0].lat),
+          lng: Number(rows[0].lon)
+        };
+        if (!Number.isFinite(result.lat) || !Number.isFinite(result.lng)) {
+          geocodeCache.set(query, null);
+          return null;
+        }
+        geocodeCache.set(query, result);
+        return result;
+      } catch {
+        geocodeCache.set(query, null);
+        return null;
+      }
+    }
+
+    function ensureScheduleMap() {
+      if (!scheduleMapEl || typeof L === 'undefined') {
+        return null;
+      }
+      if (!scheduleMap) {
+        scheduleMap = L.map(scheduleMapEl, { zoomControl: true }).setView([48.8566, 2.3522], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(scheduleMap);
+      }
+      return scheduleMap;
+    }
+
+    function renderScheduleLegend(days, dateColorMap) {
+      if (!scheduleMapLegend) {
+        return;
+      }
+      if (!days.length) {
+        scheduleMapLegend.innerHTML = '';
+        return;
+      }
+      scheduleMapLegend.innerHTML = days.map((day) => {
+        const [y, m, d] = day.split('-');
+        const title = `${Number(m)}월 ${Number(d)}일`;
+        const color = dateColorMap.get(day) || '#d9d5cb';
+        return `
+          <span class="map-legend-item">
+            <span class="map-legend-dot" style="background:${escapeHtml(color)}"></span>
+            ${escapeHtml(title)}
+          </span>
+        `;
+      }).join('');
+    }
+
+    async function renderScheduleMap(days, scheduleItems, dateColorMap) {
+      const map = ensureScheduleMap();
+      renderScheduleLegend(days, dateColorMap);
+      if (!map) {
+        if (scheduleMapStatus) {
+          scheduleMapStatus.textContent = '지도 라이브러리를 불러오지 못했습니다.';
+        }
+        return;
+      }
+
+      if (scheduleMapLayer) {
+        scheduleMapLayer.remove();
+      }
+      scheduleMapLayer = L.layerGroup().addTo(map);
+
+      const markerPoints = [];
+      for (const item of (scheduleItems || [])) {
+        const dateKey = normalizeDateKey(item.schedule_date);
+        const color = dateColorMap.get(dateKey) || '#c16630';
+
+        let coords = null;
+        const rawLat = item.latitude;
+        const rawLng = item.longitude;
+        const hasRawLat = rawLat !== null && rawLat !== undefined && String(rawLat).trim() !== '';
+        const hasRawLng = rawLng !== null && rawLng !== undefined && String(rawLng).trim() !== '';
+        if (hasRawLat && hasRawLng) {
+          const lat = Number(rawLat);
+          const lng = Number(rawLng);
+          const inRange = Number.isFinite(lat) && Number.isFinite(lng)
+            && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+          if (inRange) {
+            coords = { lat, lng };
+          }
+        }
+        if (!coords) {
+          coords = parseGoogleMapsCoordinates(item.google_maps_uri);
+        }
+        if (!coords) {
+          coords = await geocodeAddress(item.formatted_address || item.place_name || '');
+        }
+        if (!coords) {
+          continue;
+        }
+
+        const icon = L.divIcon({
+          className: '',
+          html: `<span class="map-pin-dot" style="background:${escapeHtml(color)}"></span>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        });
+
+        const popup = `
+          <strong>${escapeHtml(item.place_name || '')}</strong><br>
+          ${escapeHtml(item.schedule_date || '')} ${escapeHtml(item.schedule_time || '')}<br>
+          ${escapeHtml(item.formatted_address || '')}
+        `;
+
+        const marker = L.marker([coords.lat, coords.lng], { icon }).bindPopup(popup);
+        marker.addTo(scheduleMapLayer);
+        markerPoints.push([coords.lat, coords.lng]);
+      }
+
+      if (!markerPoints.length) {
+        if (scheduleMapStatus) {
+          scheduleMapStatus.textContent = '표시 가능한 좌표가 없어 지도를 기본 위치로 보여줍니다.';
+        }
+        map.setView([48.8566, 2.3522], 11);
+        return;
+      }
+
+      if (scheduleMapStatus) {
+        scheduleMapStatus.textContent = `지도에 ${markerPoints.length}개 일정을 표시했습니다.`;
+      }
+      map.fitBounds(markerPoints, { padding: [24, 24], maxZoom: 14 });
+    }
+
+    function normalizeDateKey(value) {
+      const text = String(value || '').trim();
+      if (!text) {
+        return '';
+      }
+      if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
+        return text.slice(0, 10);
+      }
+
+      const monthMap = {
+        Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+        Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+      };
+      const m = text.match(/(\d{1,2})\s([A-Za-z]{3})\s(\d{4})/);
+      if (m) {
+        const day = String(m[1]).padStart(2, '0');
+        const month = monthMap[m[2]] || '01';
+        return `${m[3]}-${month}-${day}`;
+      }
+
+      const m2 = text.match(/([A-Za-z]{3})\s(\d{1,2}),?\s(\d{4})/);
+      if (m2) {
+        const month = monthMap[m2[1]] || '01';
+        const day = String(m2[2]).padStart(2, '0');
+        return `${m2[3]}-${month}-${day}`;
+      }
+
+      const ms = Date.parse(text);
+      if (!Number.isNaN(ms)) {
+        const d = new Date(ms);
+        const y = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${mm}-${dd}`;
+      }
+
+      return text.slice(0, 10);
+    }
+
+    function normalizeTimeKey(value) {
+      const text = String(value || '').trim();
+      if (!text) {
+        return '10:00';
+      }
+      const direct = text.match(/^(\d{1,2}):(\d{2})/);
+      if (direct) {
+        const h = String(direct[1]).padStart(2, '0');
+        return `${h}:${direct[2]}`;
+      }
+
+      const ampm = text.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (ampm) {
+        let h = Number(ampm[1]);
+        const mm = ampm[2];
+        const period = ampm[3].toUpperCase();
+        if (period === 'PM' && h < 12) {
+          h += 12;
+        }
+        if (period === 'AM' && h === 12) {
+          h = 0;
+        }
+        return `${String(h).padStart(2, '0')}:${mm}`;
+      }
+
+      const anywhere = text.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
+      if (anywhere) {
+        const h = Math.max(0, Math.min(23, Number(anywhere[1])));
+        return `${String(h).padStart(2, '0')}:${anywhere[2]}`;
+      }
+
+      return text.slice(0, 5);
+    }
+
+    const CITY_OPTIONS = {
+      KR: ['서울', '부산', '인천', '대구', '광주', '대전', '울산', '제주', '김해'],
+      FR: ['Paris', 'Lyon', 'Marseille', 'Nice', 'Bordeaux', 'Strasbourg'],
+      JP: ['Tokyo', 'Osaka', 'Kyoto', 'Fukuoka', 'Sapporo', 'Nara'],
+      US: ['New York', 'Los Angeles', 'San Francisco', 'Seattle', 'Chicago', 'Las Vegas'],
+      GB: ['London', 'Manchester', 'Edinburgh', 'Liverpool', 'Bristol'],
+      IT: ['Rome', 'Milan', 'Florence', 'Venice', 'Naples'],
+      ES: ['Madrid', 'Barcelona', 'Seville', 'Valencia', 'Bilbao'],
+      DE: ['Berlin', 'Munich', 'Hamburg', 'Cologne', 'Frankfurt'],
+      TH: ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya', 'Krabi'],
+      '': ['Paris', 'Tokyo', 'Seoul', 'Bangkok', 'London']
+    };
+
+    function updateCityOptions() {
+      const code = countryCodeSelect.value || '';
+      const cities = CITY_OPTIONS[code] || CITY_OPTIONS[''];
+      const previous = citySelect.value;
+      citySelect.innerHTML = '<option value="">도시를 선택하세요</option>';
+      cities.forEach((city) => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        citySelect.appendChild(opt);
+      });
+      if (cities.includes(previous)) {
+        citySelect.value = previous;
+      }
+    }
+
+    function updateModalCityOptions() {
+      const code = modalCountry.value || '';
+      const cities = CITY_OPTIONS[code] || [];
+      const previous = modalCitySelect.value;
+      modalCitySelect.innerHTML = '<option value="">도시를 선택하세요</option>';
+      cities.forEach((city) => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        modalCitySelect.appendChild(opt);
+      });
+      if (cities.includes(previous)) {
+        modalCitySelect.value = previous;
+      }
+    }
+
+    function getCategoryKeyword(categoryValue) {
+      const categoryKeywordMap = {
+        tourist_attraction: '관광 명소',
+        historical_landmark: '랜드마크',
+        lodging: '호텔',
+        restaurant: '레스토랑',
+        cafe: '카페',
+        museum: '박물관',
+        park: '공원',
+        point_of_interest: '명소'
+      };
+      return categoryKeywordMap[categoryValue] || '';
+    }
+
+    function normalizeTripPlaceCategory(rawCategory) {
+      const text = String(rawCategory || '').trim().toLowerCase();
+      if (!text) {
+        return 'other';
+      }
+      if (text === 'lodging' || text === 'hotel') {
+        return 'stay';
+      }
+      if (text === 'restaurant' || text === 'cafe') {
+        return 'food';
+      }
+      if (['tourist_attraction', 'historical_landmark', 'museum', 'park', 'point_of_interest'].includes(text)) {
+        return 'tour';
+      }
+      return 'other';
+    }
+
+    function inferCategoryFromPlace(pickedPlace, fallbackCategory) {
+      const fallback = String(fallbackCategory || '').trim().toLowerCase();
+      const types = Array.isArray(pickedPlace?.types)
+        ? pickedPlace.types.map((x) => String(x || '').toLowerCase())
+        : [];
+
+      if (types.includes('restaurant')) {
+        return 'restaurant';
+      }
+      if (types.includes('cafe')) {
+        return 'cafe';
+      }
+      if (types.includes('lodging')) {
+        return 'lodging';
+      }
+      if (types.includes('tourist_attraction')) {
+        return 'tourist_attraction';
+      }
+      if (types.includes('historical_landmark')) {
+        return 'historical_landmark';
+      }
+      if (types.includes('museum')) {
+        return 'museum';
+      }
+      if (types.includes('park')) {
+        return 'park';
+      }
+      if (types.includes('point_of_interest')) {
+        return 'point_of_interest';
+      }
+
+      return fallback;
+    }
+
+    function getEffectiveQuery(autoRecommend) {
+      const cityValue = citySelect.value.trim();
+      const categoryKeyword = getCategoryKeyword(placeCategorySelect.value);
+
+      let base = '';
+      if (cityValue && categoryKeyword) {
+        base = `${cityValue} ${categoryKeyword}`;
+      } else if (cityValue) {
+        base = `${cityValue} 관광 명소`;
+      } else if (categoryKeyword) {
+        base = categoryKeyword;
+      }
+
+      if (autoRecommend) {
+        return base || '관광 명소 추천';
+      }
+      return base || '관광 명소';
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function buildPayload(autoRecommend) {
+      return {
+        query: getEffectiveQuery(autoRecommend),
+        search_type: 'text',
+        country_code: document.getElementById('countryCode').value,
+        place_category: placeCategorySelect.value,
+        latitude: document.getElementById('latitude').value.trim(),
+        longitude: document.getElementById('longitude').value.trim(),
+        radius: document.getElementById('radius').value.trim(),
+        auto_recommend: autoRecommend,
+        max_pages: document.getElementById('maxPages').value
+      };
+    }
+
+    async function readApiData(response) {
+      const contentType = (response.headers.get('content-type') || '').toLowerCase();
+      const rawText = await response.text();
+
+      if (contentType.includes('application/json')) {
+        try {
+          return rawText ? JSON.parse(rawText) : {};
+        } catch (error) {
+          throw new Error(`JSON 파싱 실패 (${response.status}): ${error.message}`);
+        }
+      }
+
+      const preview = (rawText || '').replace(/\s+/g, ' ').slice(0, 180);
+      throw new Error(`API가 JSON이 아닌 응답을 반환했습니다 (${response.status}). ${preview}`);
+    }
+
+    function closeTripManageModal() {
+      if (tripManageModal) {
+        tripManageModal.hidden = true;
+      }
+    }
+
+    function renderTripManageList(items) {
+      if (!tripManageBody) {
+        return;
+      }
+
+      if (!items.length) {
+        tripManageBody.innerHTML = '<div class="planner-item">등록된 여행이 없습니다.</div>';
+        return;
+      }
+
+      tripManageBody.innerHTML = items.map((item) => `
+        <div class="trip-modal-card">
+          <div class="trip-head">
+            <strong>${escapeHtml(item.title)}</strong>
+            <div class="mini-btn-row">
+              <button type="button" class="mini-btn js-trip-edit" data-trip-id="${escapeHtml(item.id)}" title="수정" aria-label="수정">✏️</button>
+              <button type="button" class="mini-btn danger js-trip-delete" data-trip-id="${escapeHtml(item.id)}" title="삭제" aria-label="삭제">🗑️</button>
+            </div>
+          </div>
+          <div class="trip-modal-meta">${escapeHtml(item.start_date)} ~ ${escapeHtml(item.end_date)} · 장소함 ${escapeHtml(item.place_count || 0)} · 일정표 ${escapeHtml(item.schedule_count || 0)}</div>
+          ${item.flight_info ? `<div class="trip-modal-meta">✈ ${escapeHtml(item.flight_info)}</div>` : ''}
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.js-trip-edit').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+          const target = event.currentTarget;
+          const selectedId = String(target.getAttribute('data-trip-id') || '');
+          beginTripEditById(selectedId);
+          closeTripManageModal();
+        });
+      });
+
+      document.querySelectorAll('.js-trip-delete').forEach((btn) => {
+        btn.addEventListener('click', async (event) => {
+          const target = event.currentTarget;
+          const selectedId = String(target.getAttribute('data-trip-id') || '');
+          await deleteTripById(selectedId);
+        });
+      });
+    }
+
+    function openTripManageModal() {
+      if (!tripManageModal) {
+        return;
+      }
+      renderTripManageList(cachedTrips || []);
+      tripManageModal.hidden = false;
+    }
+
+    function beginTripEditById(tripId) {
+      const selectedId = String(tripId || '');
+      const trip = cachedTrips.find((item) => String(item.id) === selectedId);
+      if (!trip) {
+        statusText.textContent = '수정할 여행 정보를 찾지 못했습니다.';
+        return;
+      }
+
+      tripEditId.value = String(trip.id);
+      document.getElementById('tripTitle').value = trip.title || '';
+      document.getElementById('tripFlightInfo').value = trip.flight_info || '';
+      document.getElementById('tripStart').value = trip.start_date || '';
+      document.getElementById('tripEnd').value = trip.end_date || '';
+      tripSubmitBtn.textContent = '여행 수정 저장';
+      tripCancelEditBtn.hidden = false;
+      statusText.textContent = `수정 모드: ${trip.title}`;
+    }
+
+    async function deleteTripById(tripId) {
+      const selectedId = String(tripId || '');
+      const trip = cachedTrips.find((item) => String(item.id) === selectedId);
+      const name = trip?.title || '선택 여행';
+
+      if (!confirm(`${name} 여행을 삭제할까요?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/trips/${encodeURIComponent(selectedId)}`, {
+          method: 'DELETE'
+        });
+        const data = await readApiData(response);
+        if (!response.ok) {
+          throw new Error(data.error || '여행 삭제 실패');
+        }
+
+        if (tripEditId.value === selectedId) {
+          resetTripEditMode();
+        }
+
+        const trips = await loadTrips();
+        const keepId = trips.length ? String(trips[0].id) : '';
+        tripSelectForPlace.value = keepId;
+        tripSelectForSchedule.value = keepId;
+        await loadTripPlacesByTrip(keepId);
+        await loadTripScheduleByTrip(keepId);
+        renderTripManageList(trips || []);
+        statusText.textContent = `여행 삭제 완료: ${name}`;
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    }
+
+    function renderTripList(items) {
+      if (tripList) {
+        tripList.innerHTML = '';
+      }
+      if (tripManageModal && !tripManageModal.hidden) {
+        renderTripManageList(items);
+      }
+    }
+
+    function resetTripEditMode() {
+      tripEditId.value = '';
+      tripSubmitBtn.textContent = '여행 생성';
+      tripCancelEditBtn.hidden = true;
+      tripForm.reset();
+    }
+
+    function renderTripPlaceList(items) {
+      if (!items.length) {
+        tripPlaceList.innerHTML = '<div class="planner-item">이 여행의 장소함이 비어 있습니다.</div>';
+        return;
+      }
+
+      const availablePlaces = items.filter((item) => !scheduledTripPlaceIds.has(Number(item.id)));
+      if (!availablePlaces.length) {
+        tripPlaceList.innerHTML = '<div class="planner-item">모든 장소가 일정표에 배정되었습니다.</div>';
+        return;
+      }
+
+      const grouped = {
+        tour: [],
+        stay: [],
+        food: [],
+        other: []
+      };
+      availablePlaces.forEach((item) => {
+        const key = normalizeTripPlaceCategory(item.place_category);
+        grouped[key].push(item);
+      });
+
+      const groupRows = [
+        { key: 'tour', title: '관광명소' },
+        { key: 'stay', title: '호텔/숙소' },
+        { key: 'food', title: '음식점' },
+        { key: 'other', title: '기타' }
+      ].filter((group) => grouped[group.key].length > 0)
+        .map((group) => `
+          <div class="place-group">
+            <div class="place-group-title">${group.title}</div>
+            <div class="place-group-chips">
+              ${grouped[group.key].map((item) => `
+                <button
+                  type="button"
+                  class="place-chip drag-place-item js-drag-place"
+                  draggable="true"
+                  data-place-id="${escapeHtml(item.id)}"
+                  data-place-name="${escapeHtml(item.place_name)}"
+                  data-place-category="${escapeHtml(item.place_category || '')}"
+                >${escapeHtml(item.place_name)}<span class="place-chip-remove js-delete-place" data-place-id="${escapeHtml(item.id)}" title="삭제" aria-label="삭제">×</span></button>
+              `).join('')}
+            </div>
+          </div>
+        `)
+        .join('');
+
+      tripPlaceList.innerHTML = groupRows;
+
+      document.querySelectorAll('.js-drag-place').forEach((card) => {
+        card.addEventListener('dragstart', (event) => {
+          if (event.target && event.target.closest('.js-delete-place')) {
+            event.preventDefault();
+            return;
+          }
+          const placeId = String(card.getAttribute('data-place-id') || '');
+          const placeName = String(card.getAttribute('data-place-name') || '');
+          if (!placeId) {
+            return;
+          }
+          activeDragPayload = { kind: 'place', id: placeId };
+          event.dataTransfer.setData('text/plain', placeId);
+          event.dataTransfer.setData('application/x-drag-kind', 'place');
+          event.dataTransfer.setData('application/x-trip-place-id', placeId);
+          event.dataTransfer.setData('application/x-trip-place-name', placeName);
+          event.dataTransfer.effectAllowed = 'copy';
+          card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+          activeDragPayload = null;
+          card.classList.remove('dragging');
+        });
+      });
+
+      document.querySelectorAll('.js-delete-place').forEach((btn) => {
+        btn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          const placeId = String(btn.getAttribute('data-place-id') || '');
+          const place = cachedTripPlaces.find((item) => String(item.id) === placeId);
+          const name = place?.place_name || '선택 장소';
+
+          if (!confirm(`${name} 장소를 삭제할까요?`)) {
+            return;
+          }
+
+          try {
+            const response = await fetch(`/api/trip-places/${encodeURIComponent(placeId)}`, { method: 'DELETE' });
+            const data = await readApiData(response);
+            if (!response.ok) {
+              throw new Error(data.error || '장소 삭제 실패');
+            }
+
+            const keepId = tripSelectForPlace.value || tripSelectForSchedule.value;
+            await loadTrips(keepId);
+            if (keepId) {
+              await loadTripPlacesByTrip(keepId);
+              await loadTripScheduleByTrip(keepId);
+            }
+            statusText.textContent = `장소 삭제 완료: ${name}`;
+          } catch (error) {
+            statusText.textContent = error.message;
+          }
+        });
+      });
+    }
+
+    async function createTripScheduleByDrop(tripId, tripPlaceId, scheduleDateValue, scheduleTimeValue) {
+      const payload = {
+        trip_id: tripId,
+        schedule_date: scheduleDateValue,
+        schedule_time: scheduleTimeValue,
+        trip_place_id: tripPlaceId,
+        note: ''
+      };
+
+      const response = await fetch('/api/trip-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '일정 배정 실패');
+      }
+
+      await loadTrips(String(tripId));
+      tripSelectForPlace.value = String(tripId);
+      tripSelectForSchedule.value = String(tripId);
+      await loadTripPlacesByTrip(String(tripId));
+      await loadTripScheduleByTrip(String(tripId), scheduleDateValue);
+      return data.schedule;
+    }
+
+    async function moveTripScheduleByDrop(scheduleId, scheduleDateValue, scheduleTimeValue) {
+      const response = await fetch(`/api/trip-schedule/${encodeURIComponent(scheduleId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule_date: scheduleDateValue,
+          schedule_time: scheduleTimeValue
+        })
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '일정 이동 실패');
+      }
+
+      const tripId = String(data.trip_id || tripSelectForSchedule.value || tripSelectForPlace.value || '');
+      await loadTrips(tripId);
+      tripSelectForPlace.value = tripId;
+      tripSelectForSchedule.value = tripId;
+      await loadTripPlacesByTrip(tripId);
+      await loadTripScheduleByTrip(tripId, scheduleDateValue);
+      return data.schedule;
+    }
+
+    async function deleteTripScheduleItem(scheduleId) {
+      const response = await fetch(`/api/trip-schedule/${encodeURIComponent(scheduleId)}`, {
+        method: 'DELETE'
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '일정 삭제 실패');
+      }
+
+      const tripId = String(data.trip_id || tripSelectForSchedule.value || tripSelectForPlace.value || '');
+      await loadTrips(tripId);
+      tripSelectForPlace.value = tripId;
+      tripSelectForSchedule.value = tripId;
+      await loadTripPlacesByTrip(tripId);
+      await loadTripScheduleByTrip(tripId, scheduleDate.value || '');
+      return data;
+    }
+
+    function bindScheduleItemDraggables() {
+      document.querySelectorAll('.js-drag-schedule').forEach((item) => {
+        const handleDragStart = (event) => {
+          const scheduleId = String(item.getAttribute('data-schedule-id') || '');
+          const label = String(item.getAttribute('data-label') || '');
+          if (!scheduleId) {
+            return;
+          }
+          activeDragPayload = { kind: 'schedule', id: scheduleId };
+          event.stopPropagation();
+          event.dataTransfer.setData('text/plain', scheduleId);
+          event.dataTransfer.setData('application/x-drag-kind', 'schedule');
+          event.dataTransfer.setData('application/x-schedule-id', scheduleId);
+          event.dataTransfer.setData('application/x-schedule-label', label);
+          event.dataTransfer.effectAllowed = 'move';
+        };
+
+        const handleDragEnd = () => {
+          activeDragPayload = null;
+        };
+
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+
+        item.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const scheduleId = Number(item.getAttribute('data-schedule-id') || '');
+          if (!Number.isFinite(scheduleId)) {
+            return;
+          }
+          openScheduleNoteModal(scheduleId);
+        });
+      });
+    }
+
+    function bindScheduleDeleteButtons() {
+      document.querySelectorAll('.js-delete-schedule').forEach((btn) => {
+        btn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          const scheduleId = Number(event.currentTarget.getAttribute('data-schedule-id') || '');
+          if (Number.isNaN(scheduleId)) {
+            statusText.textContent = '삭제할 일정 ID를 찾지 못했습니다.';
+            return;
+          }
+
+          try {
+            await deleteTripScheduleItem(scheduleId);
+            statusText.textContent = '일정 삭제 완료. 위 장소 목록에서 다시 드래그해 등록할 수 있습니다.';
+          } catch (error) {
+            statusText.textContent = error.message;
+          }
+        });
+      });
+    }
+
+    function parseDraggedNumber(rawValue) {
+      const text = String(rawValue || '').trim();
+      if (!text) {
+        return Number.NaN;
+      }
+      const parsed = Number(text);
+      return Number.isFinite(parsed) ? parsed : Number.NaN;
+    }
+
+    function bindTimetableDropTargets() {
+      document.querySelectorAll('.timetable-drop-target').forEach((cell) => {
+        cell.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          cell.classList.add('drop-over');
+          if (event.dataTransfer) {
+            const scheduleId = event.dataTransfer.getData('application/x-schedule-id');
+            event.dataTransfer.dropEffect = scheduleId ? 'move' : 'copy';
+          }
+        });
+
+        cell.addEventListener('dragleave', () => {
+          cell.classList.remove('drop-over');
+        });
+
+        cell.addEventListener('drop', async (event) => {
+          event.preventDefault();
+          cell.classList.remove('drop-over');
+
+          const tripId = tripSelectForSchedule.value || tripSelectForPlace.value;
+          if (!tripId) {
+            statusText.textContent = '여행을 먼저 선택하세요.';
+            return;
+          }
+
+          const dateValue = String(cell.getAttribute('data-drop-date') || '').trim();
+          const timeValue = String(cell.getAttribute('data-drop-time') || '').trim();
+          const dragKind = String(event.dataTransfer?.getData('application/x-drag-kind') || '').trim();
+          const draggedScheduleId = parseDraggedNumber(
+            event.dataTransfer?.getData('application/x-schedule-id')
+          );
+          const draggedPlaceId = parseDraggedNumber(
+            event.dataTransfer?.getData('application/x-trip-place-id')
+          );
+          const plainId = parseDraggedNumber(event.dataTransfer?.getData('text/plain'));
+
+          const effectiveKind = dragKind || activeDragPayload?.kind || '';
+          const effectiveScheduleId = !Number.isNaN(draggedScheduleId)
+            ? draggedScheduleId
+            : ((effectiveKind === 'schedule' && !Number.isNaN(plainId)) ? plainId : Number.NaN);
+          const effectivePlaceId = !Number.isNaN(draggedPlaceId)
+            ? draggedPlaceId
+            : ((effectiveKind === 'place' && !Number.isNaN(plainId)) ? plainId : Number.NaN);
+
+          if (!dateValue || !timeValue) {
+            statusText.textContent = '드래그 데이터가 올바르지 않습니다.';
+            return;
+          }
+
+          if (!Number.isNaN(effectiveScheduleId)) {
+            try {
+              const moved = await moveTripScheduleByDrop(effectiveScheduleId, dateValue, timeValue);
+              statusText.textContent = `일정 이동 완료: ${dateValue} ${timeValue} - ${moved.place_name}`;
+            } catch (error) {
+              statusText.textContent = error.message;
+            }
+            return;
+          }
+
+          if (Number.isNaN(effectivePlaceId)) {
+            statusText.textContent = '드래그 데이터가 올바르지 않습니다.';
+            return;
+          }
+
+          const place = cachedTripPlaces.find((x) => Number(x.id) === effectivePlaceId);
+          try {
+            await createTripScheduleByDrop(Number(tripId), effectivePlaceId, dateValue, timeValue);
+            statusText.textContent = `일정표 등록 완료: ${dateValue} ${timeValue} - ${place?.place_name || effectivePlaceId}`;
+          } catch (error) {
+            statusText.textContent = error.message;
+          }
+        });
+      });
+    }
+
+    function renderScheduleList(days, items, selectedDate) {
+      if (!days.length) {
+        scheduleList.innerHTML = '<div class="planner-item">여행 기간 정보가 없습니다.</div>';
+        return;
+      }
+
+      scheduledTripPlaceIds = new Set(
+        (items || [])
+          .map((item) => Number(item.trip_place_id))
+          .filter((value) => Number.isFinite(value))
+      );
+
+      const slotMap = new Map();
+      const dateColorMap = new Map();
+      days.forEach((day, index) => {
+        dateColorMap.set(day, getDateColor(index, days.length));
+      });
+
+      const validKeySet = new Set();
+      days.forEach((d) => {
+        TIMETABLE_HOURS.forEach((hour) => {
+          validKeySet.add(`${normalizeDateKey(d)}|${hour}`);
+        });
+      });
+
+      currentScheduleItems = Array.isArray(items) ? items.slice() : [];
+
+      let mappedCount = 0;
+      (currentScheduleItems || []).forEach((item) => {
+        const dateKey = normalizeDateKey(item.schedule_date);
+        const timeKey = normalizeTimeKey(item.schedule_time);
+        const key = `${dateKey}|${timeKey}`;
+        const parsedNote = parseScheduleNote(item.note);
+        const label = parsedNote.memo
+          ? `${item.place_name} (${parsedNote.memo})`
+          : item.place_name;
+        if (!slotMap.has(key)) {
+          slotMap.set(key, []);
+        }
+        slotMap.get(key).push({
+          id: item.id,
+          trip_id: item.trip_id,
+          schedule_date: item.schedule_date,
+          schedule_time: item.schedule_time,
+          place_name: item.place_name,
+          note: item.note,
+          label,
+          link: parsedNote.link || ''
+        });
+        if (validKeySet.has(key)) {
+          mappedCount += 1;
+        }
+      });
+
+      const headHtml = days.map((d) => {
+        const [y, m, day] = d.split('-');
+        const title = `${Number(m)}월 ${Number(day)}일`;
+        const cls = selectedDate && selectedDate === d ? 'selected-day' : '';
+        const color = dateColorMap.get(d) || '#f1ecdf';
+        return `<th class="${cls}" style="background:${escapeHtml(color)}33">${escapeHtml(title)}</th>`;
+      }).join('');
+
+      const bodyHtml = TIMETABLE_HOURS.map((hour) => {
+        const cellHtml = days.map((d) => {
+          const key = `${d}|${hour}`;
+          const cls = selectedDate && selectedDate === d ? 'selected-day' : '';
+          const color = dateColorMap.get(d) || '#f8e8d8';
+          const entries = (slotMap.get(key) || [])
+            .map((entry) => `
+              <span class="timetable-cell-item schedule-chip drag-schedule-item js-drag-schedule" draggable="true" data-schedule-id="${escapeHtml(entry.id)}" data-label="${escapeHtml(entry.label)}">
+                <span class="schedule-open-label">${escapeHtml(entry.label)}${entry.link ? '<span class="schedule-link-indicator" title="링크 저장됨" aria-label="링크 저장됨">🔗</span>' : ''}</span>
+                <button type="button" class="schedule-delete-btn js-delete-schedule" data-schedule-id="${escapeHtml(entry.id)}" title="삭제" aria-label="삭제" draggable="false">x</button>
+              </span>
+            `)
+            .join('');
+          const hint = '';
+          return `<td class="${cls} timetable-drop-target" style="background:${escapeHtml(color)}22" data-drop-date="${escapeHtml(d)}" data-drop-time="${escapeHtml(hour)}">${entries}${hint}</td>`;
+        }).join('');
+        return `<tr><td class="time-col">${escapeHtml(hour)}</td>${cellHtml}</tr>`;
+      }).join('');
+
+      let fallbackHtml = '';
+      if ((items || []).length > 0 && mappedCount === 0) {
+        fallbackHtml = `
+          <div class="planner-item" style="margin-top:10px;">
+            시간표 키 매칭이 실패해 목록으로 표시합니다.<br>
+            ${(items || []).map((x) => `${escapeHtml(String(x.schedule_date || ''))} ${escapeHtml(String(x.schedule_time || ''))} - ${escapeHtml(String(x.place_name || ''))}`).join('<br>')}
+          </div>
+        `;
+      }
+
+      scheduleList.innerHTML = `
+        <div class="timetable-wrap">
+          <table class="timetable">
+            <thead>
+              <tr>
+                <th class="time-col">시간</th>
+                ${headHtml}
+              </tr>
+            </thead>
+            <tbody>
+              ${bodyHtml}
+            </tbody>
+          </table>
+        </div>
+        ${fallbackHtml}
+      `;
+
+      bindTimetableDropTargets();
+      bindScheduleItemDraggables();
+      bindScheduleDeleteButtons();
+      renderTripPlaceList(cachedTripPlaces);
+      requestScheduleMapHeightSync();
+      renderScheduleMap(days, items || [], dateColorMap).finally(() => {
+        requestScheduleMapHeightSync();
+      });
+    }
+
+    function setTripSelectOptions(items, preferredId = '') {
+      const currentPlace = preferredId || tripSelectForPlace.value;
+      const currentSchedule = preferredId || tripSelectForSchedule.value;
+
+      tripSelectForPlace.innerHTML = '<option value="">여행을 먼저 생성하세요</option>';
+      tripSelectForSchedule.innerHTML = '<option value="">여행을 선택하세요</option>';
+
+      items.forEach((item) => {
+        const placeOpt = document.createElement('option');
+        placeOpt.value = String(item.id);
+        placeOpt.textContent = `${item.title} (${item.start_date}~${item.end_date})`;
+        tripSelectForPlace.appendChild(placeOpt);
+
+        const scheduleOpt = document.createElement('option');
+        scheduleOpt.value = String(item.id);
+        scheduleOpt.textContent = `${item.title} (${item.start_date}~${item.end_date})`;
+        tripSelectForSchedule.appendChild(scheduleOpt);
+      });
+
+      if (currentPlace && items.some((item) => String(item.id) === String(currentPlace))) {
+        tripSelectForPlace.value = String(currentPlace);
+      }
+      if (currentSchedule && items.some((item) => String(item.id) === String(currentSchedule))) {
+        tripSelectForSchedule.value = String(currentSchedule);
+      }
+
+      updateTripFlightSummary();
+    }
+
+    function updateTripFlightSummary() {
+      if (!tripFlightSummary) {
+        return;
+      }
+
+      const selectedId = String(tripSelectForPlace.value || tripSelectForSchedule.value || '');
+      const trip = cachedTrips.find((item) => String(item.id) === selectedId);
+      const flightInfo = String(trip?.flight_info || '').trim();
+
+      if (!trip) {
+        tripFlightSummary.textContent = '선택한 여행의 비행기 정보가 여기에 표시됩니다.';
+        return;
+      }
+
+      if (!flightInfo) {
+        tripFlightSummary.textContent = '비행기 정보 없음';
+        return;
+      }
+
+      tripFlightSummary.innerHTML = `✈ ${escapeHtml(flightInfo)}`;
+    }
+
+    async function loadTrips(preferredId = '') {
+      const response = await fetch('/api/trips');
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '여행 목록 조회 실패');
+      }
+
+      const trips = data.trips || [];
+      cachedTrips = trips;
+      renderTripList(trips);
+      setTripSelectOptions(trips, preferredId);
+      return trips;
+    }
+
+    async function loadTripPlacesByTrip(tripId) {
+      if (!tripId) {
+        cachedTripPlaces = [];
+        scheduledTripPlaceIds = new Set();
+        tripPlaceList.innerHTML = '<div class="planner-item">여행을 선택하면 장소함이 보입니다.</div>';
+        schedulePlace.innerHTML = '<option value="">장소함에서 선택</option>';
+        return [];
+      }
+
+      const response = await fetch(`/api/trip-places?trip_id=${encodeURIComponent(tripId)}`);
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '여행 장소 조회 실패');
+      }
+
+      const places = data.places || [];
+      cachedTripPlaces = places;
+      renderTripPlaceList(places);
+
+      schedulePlace.innerHTML = '<option value="">장소함에서 선택</option>';
+      places.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.textContent = item.place_name;
+        schedulePlace.appendChild(option);
+      });
+
+      return places;
+    }
+
+    async function loadTripScheduleByTrip(tripId, preferredDate = '') {
+      if (!tripId) {
+        scheduledTripPlaceIds = new Set();
+        currentScheduleItems = [];
+        scheduleDate.innerHTML = '<option value="">여행을 먼저 선택하세요</option>';
+        scheduleList.innerHTML = '<div class="planner-item">여행과 날짜를 선택하면 일정표가 표시됩니다.</div>';
+        requestScheduleMapHeightSync();
+        return;
+      }
+
+      const selectedDate = normalizeDateKey(preferredDate || scheduleDate.value);
+      const response = await fetch(`/api/trip-schedule?trip_id=${encodeURIComponent(tripId)}`);
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '일정표 조회 실패');
+      }
+
+      const days = data.days || [];
+      const schedule = data.schedule || [];
+
+      const selected = selectedDate;
+      scheduleDate.innerHTML = '<option value="">전체 날짜</option>';
+      days.forEach((d) => {
+        const option = document.createElement('option');
+        option.value = d;
+        option.textContent = d;
+        scheduleDate.appendChild(option);
+      });
+      if (selected && days.includes(selected)) {
+        scheduleDate.value = selected;
+      }
+
+      renderScheduleList(days, schedule, selected);
+    }
+
+    async function createTripPlace(payload, successMessage) {
+      const response = await fetch('/api/trip-places', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '여행 장소 저장 실패');
+      }
+
+      statusText.textContent = successMessage || `장소 저장 완료: ${data.place.place_name}`;
+      await loadTrips(String(payload.trip_id));
+      await loadTripPlacesByTrip(String(payload.trip_id));
+      if (tripSelectForSchedule.value === String(payload.trip_id)) {
+        await loadTripScheduleByTrip(String(payload.trip_id));
+      }
+      return data.place;
+    }
+
+    function openPhotoPicker() {
+      const tripId = tripSelectForPlace.value;
+      if (!tripId) {
+        statusText.textContent = '여행을 먼저 선택하세요.';
+        return;
+      }
+
+      const trip = cachedTrips.find((item) => String(item.id) === String(tripId));
+      photoPickerTripLabel.textContent = trip
+        ? `여행 사진 선택: ${trip.title}`
+        : '여행 사진 선택';
+
+      selectedPickedPlaces = new Map();
+      photoPickerResults.innerHTML = '';
+      photoPickerStatus.textContent = '검색 후 장소를 선택하세요.';
+      savePickedPlaceBtn.disabled = true;
+      modalCountry.value = countryCodeSelect.value || '';
+      updateModalCityOptions();
+      modalCitySelect.value = citySelect.value || '';
+      modalCategory.value = placeCategorySelect.value || '';
+      manualPlaceCategory.value = modalCategory.value || 'point_of_interest';
+      photoPickerModal.hidden = false;
+    }
+
+    function closePhotoPicker() {
+      photoPickerModal.hidden = true;
+    }
+
+    function parseManualCoordinate(value, label, min, max) {
+      const text = String(value || '').trim();
+      if (!text) {
+        return null;
+      }
+      const num = Number(text);
+      if (!Number.isFinite(num) || num < min || num > max) {
+        throw new Error(`${label} 값이 올바르지 않습니다.`);
+      }
+      return num;
+    }
+
+    function parseLatLngText(raw) {
+      const text = String(raw || '').trim();
+      if (!text) {
+        return null;
+      }
+      const m = text.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+      if (!m) {
+        return null;
+      }
+      const lat = Number(m[1]);
+      const lng = Number(m[2]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null;
+      }
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return null;
+      }
+      return { lat, lng };
+    }
+
+    function extractNameFromGoogleMapsUrl(urlText) {
+      const text = String(urlText || '').trim();
+      if (!text) {
+        return '';
+      }
+
+      try {
+        const url = new URL(text);
+        const placePath = url.pathname.match(/\/place\/([^/]+)/i);
+        if (placePath && placePath[1]) {
+          return decodeURIComponent(placePath[1]).replace(/\+/g, ' ').trim();
+        }
+
+        const q = (url.searchParams.get('q') || url.searchParams.get('query') || '').trim();
+        if (q && !parseLatLngText(q)) {
+          return q;
+        }
+      } catch {
+        // Ignore parse errors and fallback to empty name.
+      }
+
+      return '';
+    }
+
+    async function fillManualPlaceFromMapsUrl() {
+      const mapsUri = String(manualPlaceMaps.value || '').trim();
+      if (!mapsUri) {
+        throw new Error('Google Maps 링크를 먼저 입력하세요.');
+      }
+
+      let resolvedUrl = mapsUri;
+      let coords = null;
+      let extractedName = '';
+
+      try {
+        const response = await fetch('/api/maps-resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ maps_url: mapsUri })
+        });
+        const data = await readApiData(response);
+        if (response.ok) {
+          resolvedUrl = String(data.final_url || mapsUri);
+          manualPlaceMaps.value = resolvedUrl;
+
+          const lat = Number(data.latitude);
+          const lng = Number(data.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            coords = { lat, lng };
+          }
+          extractedName = String(data.place_name || '').trim();
+        }
+      } catch {
+        // Fallback parsing below.
+      }
+
+      if (!coords) {
+        coords = parseGoogleMapsCoordinates(resolvedUrl);
+      }
+      if (!coords) {
+        try {
+          const url = new URL(resolvedUrl);
+          coords = parseLatLngText(url.searchParams.get('q') || '') || parseLatLngText(url.searchParams.get('query') || '');
+        } catch {
+          coords = null;
+        }
+      }
+
+      if (!extractedName) {
+        extractedName = extractNameFromGoogleMapsUrl(resolvedUrl);
+      }
+      if (!manualPlaceName.value.trim() && extractedName) {
+        manualPlaceName.value = extractedName;
+      }
+
+      if (!coords) {
+        photoPickerStatus.textContent = '링크에서 좌표를 찾지 못했습니다. Google Maps에서 장소 상세의 전체 URL(google.com/maps/place/...)을 붙여넣으면 성공률이 높습니다.';
+        return;
+      }
+
+      manualPlaceLat.value = String(coords.lat);
+      manualPlaceLng.value = String(coords.lng);
+
+      try {
+        const endpoint = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(coords.lat)}&lon=${encodeURIComponent(coords.lng)}`;
+        const response = await fetch(endpoint, {
+          headers: { Accept: 'application/json' }
+        });
+        if (response.ok) {
+          const geo = await response.json();
+          if (!manualPlaceAddress.value.trim() && geo?.display_name) {
+            manualPlaceAddress.value = geo.display_name;
+          }
+          if (!manualPlaceName.value.trim() && geo?.name) {
+            manualPlaceName.value = String(geo.name);
+          }
+        }
+      } catch {
+        // Address reverse lookup is best-effort only.
+      }
+
+      photoPickerStatus.textContent = '링크 기반 자동 채우기 완료. 값 확인 후 저장하세요.';
+    }
+
+    async function saveManualPlaceToTrip() {
+      const tripId = tripSelectForPlace.value;
+      if (!tripId) {
+        throw new Error('여행을 먼저 선택하세요.');
+      }
+
+      const placeName = String(manualPlaceName.value || '').trim();
+      const formattedAddress = String(manualPlaceAddress.value || '').trim();
+      const mapsUri = String(manualPlaceMaps.value || '').trim();
+      if (!placeName) {
+        throw new Error('장소명을 입력하세요.');
+      }
+
+      let latitude = parseManualCoordinate(manualPlaceLat.value, '위도', -90, 90);
+      let longitude = parseManualCoordinate(manualPlaceLng.value, '경도', -180, 180);
+      if ((latitude === null) !== (longitude === null)) {
+        throw new Error('위도와 경도는 함께 입력하거나 함께 비워야 합니다.');
+      }
+
+      if (latitude === null && longitude === null && mapsUri) {
+        const fromMaps = parseGoogleMapsCoordinates(mapsUri);
+        if (fromMaps) {
+          latitude = fromMaps.lat;
+          longitude = fromMaps.lng;
+        }
+      }
+
+      const payload = {
+        trip_id: tripId,
+        place_name: placeName,
+        place_category: (manualPlaceCategory.value || modalCategory.value || placeCategorySelect.value || 'point_of_interest').trim().toLowerCase(),
+        formatted_address: formattedAddress,
+        google_maps_uri: mapsUri,
+        latitude,
+        longitude,
+        memo: ''
+      };
+
+      await createTripPlace(payload, `직접 입력 장소 저장: ${placeName}`);
+      manualPlaceName.value = '';
+      manualPlaceAddress.value = '';
+      manualPlaceMaps.value = '';
+      manualPlaceCategory.value = modalCategory.value || 'point_of_interest';
+      manualPlaceLat.value = '';
+      manualPlaceLng.value = '';
+    }
+
+    function renderPhotoPickerResults(items) {
+      if (!items.length) {
+        photoPickerResults.innerHTML = '<div class="planner-item">검색 결과가 없습니다.</div>';
+        return;
+      }
+
+      photoPickerResults.innerHTML = items.map((item, index) => {
+        const displayName = typeof item.displayName === 'object'
+          ? (item.displayName?.text || '이름 없음')
+          : (item.displayName || '이름 없음');
+        return `
+          <article class="picker-card" data-picker-index="${index}">
+            ${item.photoUrl ? `<img class="picker-photo" src="${escapeHtml(item.photoUrl)}" alt="${escapeHtml(displayName)}">` : ''}
+            <strong>${escapeHtml(displayName)}</strong>
+            <div class="note">${escapeHtml(item.formattedAddress || '')}</div>
+            <div class="mini-btn-row" style="margin-top:8px;">
+              <button type="button" class="picker-check-btn js-pick-place" data-picker-index="${index}" title="선택" aria-pressed="false">□</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.js-pick-place').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+          const idx = Number(event.currentTarget.getAttribute('data-picker-index'));
+          const activeCard = document.querySelector(`.picker-card[data-picker-index="${idx}"]`);
+          if (selectedPickedPlaces.has(idx)) {
+            selectedPickedPlaces.delete(idx);
+            if (activeCard) {
+              activeCard.classList.remove('active');
+            }
+            event.currentTarget.textContent = '□';
+            event.currentTarget.setAttribute('aria-pressed', 'false');
+          } else {
+            selectedPickedPlaces.set(idx, items[idx]);
+            if (activeCard) {
+              activeCard.classList.add('active');
+            }
+            event.currentTarget.textContent = '☑';
+            event.currentTarget.setAttribute('aria-pressed', 'true');
+          }
+
+          const selectedCount = selectedPickedPlaces.size;
+          savePickedPlaceBtn.disabled = selectedCount === 0;
+          if (selectedCount > 0) {
+            photoPickerStatus.textContent = `선택 ${selectedCount}건. 저장하기를 누르면 모두 여행 장소함에 저장됩니다.`;
+          } else {
+            photoPickerStatus.textContent = '저장할 장소를 선택하세요.';
+          }
+
+        });
+      });
+    }
+
+    async function searchPhotoPicker() {
+      const selectedCountry = modalCountry.value.trim();
+      const selectedCity = modalCitySelect.value.trim();
+      const selectedCategory = modalCategory.value.trim();
+
+      if (!selectedCountry || !selectedCity || !selectedCategory) {
+        throw new Error('국가, 도시, 카테고리를 모두 선택하세요.');
+      }
+
+      const keyword = getCategoryKeyword(selectedCategory) || '관광 명소';
+      const payload = {
+        query: `${selectedCity} ${keyword}`,
+        search_type: 'text',
+        country_code: selectedCountry,
+        place_category: selectedCategory,
+        latitude: '',
+        longitude: '',
+        radius: '',
+        auto_recommend: false,
+        max_pages: '1'
+      };
+
+      photoPickerStatus.textContent = '검색 중...';
+      photoPickerResults.innerHTML = '';
+      selectedPickedPlaces = new Map();
+      savePickedPlaceBtn.disabled = true;
+
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '사진 검색 실패');
+      }
+
+      const items = data.places || [];
+      photoPickerStatus.textContent = `검색 결과 ${items.length}건`;
+      renderPhotoPickerResults(items);
+    }
+
+    async function savePickedPlaceToTrip() {
+      const tripId = tripSelectForPlace.value;
+      if (!tripId) {
+        throw new Error('여행을 먼저 선택하세요.');
+      }
+      const selectedCategory = (modalCategory.value || 'point_of_interest').trim().toLowerCase();
+      const pickedItems = Array.from(selectedPickedPlaces.values());
+      if (!pickedItems.length) {
+        throw new Error('저장할 장소를 먼저 선택하세요.');
+      }
+
+      for (const pickedPlace of pickedItems) {
+        const displayName = typeof pickedPlace.displayName === 'object'
+          ? (pickedPlace.displayName?.text || '이름 없음')
+          : (pickedPlace.displayName || '이름 없음');
+
+        const payload = {
+          trip_id: tripId,
+          place_name: displayName,
+          place_category: selectedCategory,
+          formatted_address: pickedPlace.formattedAddress || '',
+          google_maps_uri: pickedPlace.googleMapsUri || '',
+          latitude: pickedPlace.latitude,
+          longitude: pickedPlace.longitude,
+          memo: ''
+        };
+
+        await createTripPlace(payload);
+      }
+
+      statusText.textContent = `여행 장소함에 ${pickedItems.length}건 저장 완료`;
+      closePhotoPicker();
+    }
+
+    function renderResults(items) {
+      results.innerHTML = '';
+      tableWrap.hidden = true;
+      jsonWrap.hidden = true;
+      if (!items.length) {
+        messageBox.className = 'empty';
+        messageBox.textContent = '조건에 맞는 장소를 찾지 못했습니다.';
+        messageBox.hidden = false;
+        statusText.textContent = '검색 결과 0건';
+        return;
+      }
+
+      messageBox.hidden = true;
+      statusText.textContent = `검색 결과 ${items.length}건`;
+
+      items.forEach((item) => {
+        const card = document.createElement('article');
+        card.className = 'result-card';
+        const types = Array.isArray(item.types) ? item.types.slice(0, 4) : [];
+        const displayName = typeof item.displayName === 'object'
+          ? (item.displayName?.text || '이름 없음')
+          : (item.displayName || '이름 없음');
+        card.innerHTML = `
+          ${item.photoUrl ? `<img class="place-photo" src="${escapeHtml(item.photoUrl)}" alt="${escapeHtml(displayName)}">` : ''}
+          <div class="result-head">
+            <div>
+              <h2 class="title">${escapeHtml(displayName)}</h2>
+              <div class="badge-row">
+                ${types.map((type) => `<span class="badge">${escapeHtml(type)}</span>`).join('')}
+                ${item.businessStatus ? `<span class="badge">${escapeHtml(item.businessStatus)}</span>` : ''}
+              </div>
+            </div>
+            <div class="rating">${item.rating ? `평점 ${escapeHtml(item.rating)} / 리뷰 ${escapeHtml(item.userRatingCount || 0)}` : '평점 없음'}</div>
+          </div>
+          <p class="address">${escapeHtml(item.formattedAddress || '주소 정보 없음')}</p>
+          <div class="links">
+            ${item.websiteUri ? `<a href="${escapeHtml(item.websiteUri)}" target="_blank" rel="noopener noreferrer">웹사이트</a>` : ''}
+            ${item.googleMapsUri ? `<a href="${escapeHtml(item.googleMapsUri)}" target="_blank" rel="noopener noreferrer">Google Maps</a>` : ''}
+            <button
+              type="button"
+              class="trip-save-btn js-save-trip-place"
+              data-name="${escapeHtml(displayName)}"
+              data-address="${escapeHtml(item.formattedAddress || '')}"
+              data-maps="${escapeHtml(item.googleMapsUri || '')}"
+              data-lat="${escapeHtml(item.latitude ?? '')}"
+              data-lng="${escapeHtml(item.longitude ?? '')}"
+            >여행에 담기</button>
+          </div>
+        `;
+        results.appendChild(card);
+      });
+
+      document.querySelectorAll('.js-save-trip-place').forEach((btn) => {
+        btn.addEventListener('click', async (event) => {
+          const tripId = tripSelectForPlace.value;
+          if (!tripId) {
+            statusText.textContent = '먼저 여행을 선택하세요.';
+            return;
+          }
+
+          const target = event.currentTarget;
+          const payload = {
+            trip_id: tripId,
+            place_name: target.getAttribute('data-name') || '',
+            place_category: placeCategorySelect.value || 'point_of_interest',
+            formatted_address: target.getAttribute('data-address') || '',
+            google_maps_uri: target.getAttribute('data-maps') || '',
+            latitude: target.getAttribute('data-lat') || '',
+            longitude: target.getAttribute('data-lng') || '',
+            memo: ''
+          };
+
+          try {
+            await createTripPlace(payload, `여행 장소함에 저장: ${payload.place_name}`);
+          } catch (error) {
+            statusText.textContent = error.message;
+          }
+        });
+      });
+    }
+
+    function renderTableResult(data) {
+      const columns = data.columns || [];
+      const rows = data.rows || [];
+      const summary = data.summary || {};
+      results.innerHTML = '';
+      jsonWrap.hidden = true;
+
+      tableWrap.hidden = false;
+      tableHead.innerHTML = `<tr>${columns.map((c) => `<th>${escapeHtml(c)}</th>`).join('')}</tr>`;
+      tableBody.innerHTML = rows.map((row) => `
+        <tr>
+          ${columns.map((c) => {
+            const v = row[c] ?? '';
+            const cls = ['formatted_address', 'website', 'google_maps', 'types'].includes(c) ? 'long' : '';
+            return `<td class="${cls}">${escapeHtml(v)}</td>`;
+          }).join('')}
+        </tr>
+      `).join('');
+
+      const presence = summary.field_presence || {};
+      const filled = columns.map((c) => `${c}: ${presence[c] || 0}`).join(' | ');
+      tableSummary.textContent = `행 ${summary.fetched_rows || 0}건, 페이지 ${summary.fetched_pages || 0}개 조회, 추가 페이지 존재: ${summary.has_more ? '예' : '아니오'} | 필드 채움 수 -> ${filled}`;
+
+      messageBox.hidden = true;
+      statusText.textContent = `테이블 조회 ${summary.fetched_rows || 0}건`;
+    }
+
+    function renderRawJsonResult(data) {
+      results.innerHTML = '';
+      tableWrap.hidden = true;
+      jsonWrap.hidden = false;
+      const summary = data.summary || {};
+      jsonHead.textContent = `전체 JSON ${summary.rows || 0}건 | 페이지 ${summary.pages || 0}개 | 국가 ${summary.country_code || 'all'} | 추가 페이지 ${summary.has_more ? '있음' : '없음'}`;
+      jsonOutput.textContent = JSON.stringify(data, null, 2);
+      messageBox.hidden = true;
+      statusText.textContent = `JSON 조회 ${summary.rows || 0}건`;
+    }
+
+    async function performSearch(payload, loadingMessage) {
+      results.innerHTML = '';
+      messageBox.hidden = false;
+      messageBox.className = 'empty';
+      messageBox.textContent = loadingMessage;
+      statusText.textContent = 'Google Places API 호출 중';
+
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await readApiData(response);
+        if (!response.ok) {
+          throw new Error(data.error || '검색 중 오류가 발생했습니다.');
+        }
+        renderResults(data.places || []);
+      } catch (error) {
+        messageBox.hidden = false;
+        messageBox.className = 'error';
+        messageBox.textContent = error.message;
+        statusText.textContent = '검색 실패';
+      }
+    }
+
+    countryCodeSelect.addEventListener('change', updateCityOptions);
+    modalCountry.addEventListener('change', updateModalCityOptions);
+    updateCityOptions();
+    updateModalCityOptions();
+
+    // Keep photo picker closed until user explicitly opens it from section 2.
+    closePhotoPicker();
+
+    openPhotoPickerBtn.addEventListener('click', openPhotoPicker);
+    openTripManageBtn.addEventListener('click', openTripManageModal);
+    closePhotoPickerBtn.addEventListener('click', closePhotoPicker);
+    photoPickerBackdrop.addEventListener('click', closePhotoPicker);
+    closeTripManageBtn.addEventListener('click', closeTripManageModal);
+    tripManageBackdrop.addEventListener('click', closeTripManageModal);
+    closeScheduleNoteBtn.addEventListener('click', closeScheduleNoteModal);
+    scheduleNoteBackdrop.addEventListener('click', closeScheduleNoteModal);
+    saveScheduleNoteBtn.addEventListener('click', async () => {
+      try {
+        await saveScheduleNote();
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
+    scheduleNoteMemo.addEventListener('input', () => {
+      renderScheduleNotePreview(scheduleNoteMemo.value);
+    });
+    openScheduleLinkBtn.addEventListener('click', openScheduleLinkNow);
+    window.addEventListener('resize', requestScheduleMapHeightSync);
+
+    if ('ResizeObserver' in window && schedulePlannerCard) {
+      scheduleCardResizeObserver = new ResizeObserver(() => {
+        requestScheduleMapHeightSync();
+      });
+      scheduleCardResizeObserver.observe(schedulePlannerCard);
+    }
+    photoPickerSearchForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await searchPhotoPicker();
+      } catch (error) {
+        photoPickerStatus.textContent = error.message;
+      }
+    });
+    savePickedPlaceBtn.addEventListener('click', async () => {
+      try {
+        await savePickedPlaceToTrip();
+      } catch (error) {
+        photoPickerStatus.textContent = error.message;
+      }
+    });
+    saveManualPlaceBtn.addEventListener('click', async () => {
+      try {
+        await saveManualPlaceToTrip();
+      } catch (error) {
+        photoPickerStatus.textContent = error.message;
+      }
+    });
+    fillManualFromMapsBtn.addEventListener('click', async () => {
+      try {
+        await fillManualPlaceFromMapsUrl();
+      } catch (error) {
+        photoPickerStatus.textContent = error.message;
+      }
+    });
+
+    tripForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const editId = (tripEditId.value || '').trim();
+      const payload = {
+        title: document.getElementById('tripTitle').value.trim(),
+        flight_info: document.getElementById('tripFlightInfo').value.trim(),
+        start_date: document.getElementById('tripStart').value,
+        end_date: document.getElementById('tripEnd').value
+      };
+
+      try {
+        const isEdit = Boolean(editId);
+        const response = await fetch(isEdit ? `/api/trips/${encodeURIComponent(editId)}` : '/api/trips', {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await readApiData(response);
+        if (!response.ok) {
+          throw new Error(data.error || (isEdit ? '여행 수정 실패' : '여행 생성 실패'));
+        }
+
+        statusText.textContent = isEdit
+          ? `여행 수정 완료: ${data.trip.title}`
+          : `여행 생성 완료: ${data.trip.title}`;
+        setTimeout(() => {
+          window.location.reload();
+        }, 250);
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
+
+    tripCancelEditBtn.addEventListener('click', () => {
+      resetTripEditMode();
+      statusText.textContent = '여행 수정이 취소되었습니다.';
+    });
+
+    scheduleForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      statusText.textContent = '장소함 카드를 시간표 칸으로 드래그해 배정하세요.';
+    });
+
+    tripSelectForPlace.addEventListener('change', async () => {
+      const tripId = tripSelectForPlace.value;
+      tripSelectForSchedule.value = tripId;
+      updateTripFlightSummary();
+      try {
+        await loadTripPlacesByTrip(tripId);
+        await loadTripScheduleByTrip(tripId);
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
+
+    tripSelectForSchedule.addEventListener('change', async () => {
+      const tripId = tripSelectForSchedule.value;
+      tripSelectForPlace.value = tripId;
+      updateTripFlightSummary();
+      try {
+        await loadTripPlacesByTrip(tripId);
+        await loadTripScheduleByTrip(tripId);
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
+
+    searchForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await performSearch(buildPayload(false), '검색 중입니다...');
+    });
+
+    autoRecommendBtn.addEventListener('click', async () => {
+      await performSearch(buildPayload(true), '관광지 자동 추천을 찾는 중입니다...');
+    });
+
+    tableInspectBtn.addEventListener('click', async () => {
+      const payload = buildPayload(false);
+      results.innerHTML = '';
+      messageBox.hidden = false;
+      messageBox.className = 'empty';
+      messageBox.textContent = 'API 데이터를 테이블로 조회 중입니다...';
+      statusText.textContent = 'Google Places API 페이지 조회 중';
+
+      try {
+        const response = await fetch('/api/search_table', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await readApiData(response);
+        if (!response.ok) {
+          throw new Error(data.error || '테이블 조회 중 오류가 발생했습니다.');
+        }
+        renderTableResult(data);
+      } catch (error) {
+        tableWrap.hidden = true;
+        jsonWrap.hidden = true;
+        messageBox.hidden = false;
+        messageBox.className = 'error';
+        messageBox.textContent = error.message;
+        statusText.textContent = '테이블 조회 실패';
+      }
+    });
+
+    rawJsonBtn.addEventListener('click', async () => {
+      results.innerHTML = '';
+      tableWrap.hidden = true;
+      jsonWrap.hidden = true;
+      messageBox.hidden = false;
+      messageBox.className = 'empty';
+      messageBox.textContent = '검색어 없이 전체 JSON 데이터를 조회 중입니다...';
+      statusText.textContent = 'Google Places API 원본 JSON 조회 중';
+
+      try {
+        const countryCode = document.getElementById('countryCode').value.toLowerCase();
+        const response = await fetch(`/api/raw_json_100?country_code=${encodeURIComponent(countryCode)}`);
+        const data = await readApiData(response);
+        if (!response.ok) {
+          throw new Error(data.error || 'JSON 조회 중 오류가 발생했습니다.');
+        }
+        renderRawJsonResult(data);
+      } catch (error) {
+        messageBox.hidden = false;
+        messageBox.className = 'error';
+        messageBox.textContent = error.message;
+        statusText.textContent = 'JSON 조회 실패';
+      }
+    });
+
+    (async () => {
+      try {
+        await loadTrips();
+        const tripId = tripSelectForPlace.value || tripSelectForSchedule.value;
+        if (tripId) {
+          await loadTripPlacesByTrip(tripId);
+          await loadTripScheduleByTrip(tripId);
+        } else {
+          tripPlaceList.innerHTML = '<div class="planner-item">여행을 선택하면 장소함이 보입니다.</div>';
+          scheduleList.innerHTML = '<div class="planner-item">여행과 날짜를 선택하면 일정표가 표시됩니다.</div>';
+          requestScheduleMapHeightSync();
+        }
+        requestScheduleMapHeightSync();
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    })();
+  </script>
+</body>
+</html>

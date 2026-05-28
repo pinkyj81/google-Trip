@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: googleplacesflask
+    env: docker
+    rootDir: GooglePlacesFlask
+    autoDeploy: true
+    healthCheckPath: /
