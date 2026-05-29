@@ -40,6 +40,8 @@ FIELD_MASK = ','.join([
     'places.photos.name',
 ])
 
+DB_NOTE_MAX_LEN = 1000
+
 
 def _get_mssql_conn() -> pyodbc.Connection:
     if not DB_USERNAME or not DB_PASSWORD:
@@ -56,6 +58,27 @@ def _get_mssql_conn() -> pyodbc.Connection:
     )
     conn = pyodbc.connect(conn_str)
     return conn
+
+
+def _fit_db_text(value: str, max_len: int = DB_NOTE_MAX_LEN) -> str:
+    text = str(value or '').strip()
+    if len(text) <= max_len:
+        return text
+    return text[:max_len]
+
+
+def _extract_user_memo_text(note_text: str) -> str:
+    text = str(note_text or '').strip()
+    if not text:
+        return ''
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    memo_line = next((line for line in lines if line.startswith('[MEMO]')), '')
+    if memo_line:
+        return memo_line.replace('[MEMO]', '', 1).strip()
+
+    filtered = [line for line in lines if not line.startswith('[PHOTO]') and not line.startswith('[LINK]')]
+    return '\n'.join(filtered).strip() if filtered else text
 
 
 def _ensure_planner_tables(conn: pyodbc.Connection) -> None:
@@ -466,14 +489,28 @@ def _extract_coords_and_name_from_maps_url(url_text: str) -> tuple[float | None,
             lat = float(m.group(1))
             lng = float(m.group(2))
 
+    def _decode_percent_text(raw_text: str) -> str:
+        value = str(raw_text or '').strip()
+        if not value:
+            return ''
+
+        decoded = value
+        for _ in range(4):
+            next_value = unquote(decoded)
+            if next_value == decoded:
+                break
+            decoded = next_value
+
+        return decoded.replace('+', ' ').strip()
+
     path_place = re.search(r'/place/([^/]+)', parsed.path, re.IGNORECASE)
     if path_place and path_place.group(1):
-        name = unquote(path_place.group(1)).replace('+', ' ').strip()
+        name = _decode_percent_text(path_place.group(1))
 
     if not name:
         q = (qs.get('q') or qs.get('query') or [''])[0].strip()
         if q and not re.search(r'^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$', q):
-            name = q
+            name = _decode_percent_text(q)
 
     if lat is not None and (lat < -90 or lat > 90):
         lat = None
@@ -862,7 +899,7 @@ def create_trip_place():
     google_maps_uri = (data.get('google_maps_uri') or '').strip()
     latitude = _parse_float(data.get('latitude'))
     longitude = _parse_float(data.get('longitude'))
-    memo = (data.get('memo') or '').strip()
+    memo = _fit_db_text((data.get('memo') or '').strip())
     place_category = (data.get('place_category') or '').strip().lower()
 
     allowed_categories = {
@@ -1034,7 +1071,7 @@ def create_trip_schedule():
     except ValueError:
         return jsonify({'error': 'schedule_time 형식은 HH:MM 이어야 합니다. 예: 10:00'}), 400
 
-    note = (data.get('note') or '').strip()
+    note = _fit_db_text((data.get('note') or '').strip())
 
     try:
         with _get_mssql_conn() as conn:
@@ -1081,7 +1118,7 @@ def create_trip_schedule():
             place_longitude = place_row[5]
             place_memo = str(place_row[6] or '').strip()
             if not note and place_memo:
-                note = place_memo
+                note = _fit_db_text(place_memo)
 
             if has_schedule_time:
                 cursor.execute(
@@ -1315,7 +1352,7 @@ def update_trip_schedule(schedule_id: int):
 
             note = current_note
             if 'note' in data:
-                note = str(data.get('note') or '').strip()
+                note = _fit_db_text(str(data.get('note') or '').strip())
 
             if schedule_date < start_date or schedule_date > end_date:
                 return jsonify({'error': '선택 날짜가 여행 기간을 벗어났습니다.'}), 400
@@ -1342,13 +1379,15 @@ def update_trip_schedule(schedule_id: int):
                     (schedule_date, note, schedule_id),
                 )
 
+            place_memo = _fit_db_text(_extract_user_memo_text(note))
+
             cursor.execute(
                 '''
                 UPDATE dbo.travel_trip_places
                 SET memo = ?
                 WHERE id = ?
                 ''',
-                (note, trip_place_id),
+                (place_memo, trip_place_id),
             )
 
             cursor.execute(
