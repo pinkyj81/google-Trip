@@ -872,6 +872,22 @@
       font-size: 13px;
       box-shadow: none;
     }
+    .manual-place-photo-wrap {
+      display: grid;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .manual-place-photo-wrap .note {
+      margin: 0;
+    }
+    .manual-place-photo {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #e4dccf;
+      background: #eee7db;
+    }
     .picker-card {
       border: 1px solid #ddd6c9;
       border-radius: 12px;
@@ -979,6 +995,15 @@
     .note-place-summary-item a {
       color: #355070;
       word-break: break-all;
+    }
+    .note-place-photo {
+      display: block;
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #ddd0bd;
+      background: #f4f0e7;
     }
     .note-preview-wrap {
       display: grid;
@@ -1339,6 +1364,10 @@
             <div class="manual-place-maps-actions">
               <button type="button" id="fillManualFromMapsBtn">링크로 자동 채우기</button>
             </div>
+            <div id="manualPlacePhotoWrap" class="manual-place-photo-wrap" hidden>
+              <div class="note">사진</div>
+              <img id="manualPlacePhotoPreview" class="manual-place-photo" alt="파싱된 장소 사진" />
+            </div>
           </div>
           <div>
             <label for="manualPlaceCategory">구분</label>
@@ -1491,6 +1520,8 @@
     const manualPlaceCategory = document.getElementById('manualPlaceCategory');
     const manualPlaceLat = document.getElementById('manualPlaceLat');
     const manualPlaceLng = document.getElementById('manualPlaceLng');
+    const manualPlacePhotoWrap = document.getElementById('manualPlacePhotoWrap');
+    const manualPlacePhotoPreview = document.getElementById('manualPlacePhotoPreview');
     const fillManualFromMapsBtn = document.getElementById('fillManualFromMapsBtn');
     const saveManualPlaceBtn = document.getElementById('saveManualPlaceBtn');
     const tripManageModal = document.getElementById('tripManageModal');
@@ -1531,23 +1562,66 @@
     let currentScheduleItems = [];
     let editingScheduleId = null;
     let currentScheduleNoteItem = null;
+    let manualPlacePhotoUrl = '';
+    const scheduleNotePhotoCache = new Map();
+    let scheduleNotePhotoRequestId = 0;
     let scheduleMapSyncRaf = 0;
     let scheduleCardResizeObserver = null;
 
     function parseScheduleNote(rawNote) {
       const text = String(rawNote || '').trim();
       if (!text) {
-        return { memo: '' };
+        return { memo: '', photo: '', link: '' };
       }
 
       const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
       const memoLine = lines.find((line) => line.startsWith('[MEMO]'));
+      const photoLine = lines.find((line) => line.startsWith('[PHOTO]'));
+      const linkLine = lines.find((line) => line.startsWith('[LINK]'));
+
+      const photo = photoLine ? photoLine.replace(/^\[PHOTO\]/, '').trim() : '';
+      const link = linkLine ? linkLine.replace(/^\[LINK\]/, '').trim() : '';
+
       if (memoLine) {
-        return { memo: memoLine.replace(/^\[MEMO\]/, '').trim() };
+        return {
+          memo: memoLine.replace(/^\[MEMO\]/, '').trim(),
+          photo,
+          link,
+        };
       }
 
-      const filtered = lines.filter((line) => !line.startsWith('[LINK]'));
-      return { memo: filtered.join('\n') || text };
+      const filtered = lines.filter((line) => !line.startsWith('[LINK]') && !line.startsWith('[PHOTO]'));
+      return {
+        memo: filtered.join('\n') || text,
+        photo,
+        link,
+      };
+    }
+
+    function buildScheduleNoteValue(memoText, options = {}) {
+      const lines = [];
+      const memo = String(memoText || '').trim();
+      const photo = String(options.photo || '').trim();
+      const link = String(options.link || '').trim();
+
+      if (memo) {
+        lines.push(`[MEMO] ${memo}`);
+      }
+      if (photo) {
+        lines.push(`[PHOTO] ${photo}`);
+      }
+      if (link && link.length <= 240) {
+        lines.push(`[LINK] ${link}`);
+      }
+
+      let built = lines.join('\n').trim();
+      if (built.length <= 980) {
+        return built;
+      }
+
+      // If metadata gets too long for NVARCHAR(1000), keep user memo first.
+      const clippedMemo = memo.slice(0, 900);
+      return clippedMemo ? `[MEMO] ${clippedMemo}` : '';
     }
 
     function escapeAttribute(value) {
@@ -1565,8 +1639,7 @@
       const escaped = escapeHtml(source);
       return escaped.replace(/https?:\/\/[^\s<>"]+/gi, (match) => {
         const safeHref = escapeAttribute(match);
-        const safeText = escapeHtml(match);
-        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeText}</a>`;
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">링크 열기</a>`;
       });
     }
 
@@ -1582,22 +1655,99 @@
       scheduleNotePreview.innerHTML = linkifyText(content).replace(/\n/g, '<br>');
     }
 
-    function renderSchedulePlaceSummary(item) {
-      if (!scheduleNotePlaceSummary) {
-        return;
-      }
+    function buildSchedulePlaceSummaryHtml(item, options = {}) {
       const name = escapeHtml(item?.place_name || '');
       const address = escapeHtml(item?.formatted_address || '');
       const googleMapsUri = String(item?.google_maps_uri || '').trim();
       const googleMapsHtml = googleMapsUri
-        ? `<a href="${escapeAttribute(googleMapsUri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(googleMapsUri)}</a>`
+        ? `<a href="${escapeAttribute(googleMapsUri)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`
         : '<span class="empty-note">구글맵 링크 없음</span>';
 
-      scheduleNotePlaceSummary.innerHTML = `
+      const photoUrl = String(options.photoUrl || '').trim();
+      const photoState = options.photoState || 'loading';
+      const photoHtml = photoUrl
+        ? `<img class="note-place-photo" src="${escapeAttribute(photoUrl)}" alt="${name || '장소 사진'}">`
+        : (photoState === 'loading'
+          ? '<span class="empty-note">사진 불러오는 중...</span>'
+          : '<span class="empty-note">사진 없음</span>');
+
+      return `
         <div class="note-place-summary-item"><span>이름</span><strong>${name || '<span class="empty-note">정보 없음</span>'}</strong></div>
         <div class="note-place-summary-item"><span>주소</span><div>${address || '<span class="empty-note">정보 없음</span>'}</div></div>
+        <div class="note-place-summary-item"><span>사진</span><div>${photoHtml}</div></div>
         <div class="note-place-summary-item"><span>구글맵 정보</span><div>${googleMapsHtml}</div></div>
       `;
+    }
+
+    async function fetchSchedulePlacePhotoUrl(item) {
+      const preset = String(item?.photoUrl || '').trim();
+      if (preset) {
+        return preset;
+      }
+
+      const notePhoto = String(parseScheduleNote(item?.note).photo || '').trim();
+      if (notePhoto) {
+        return notePhoto;
+      }
+
+      const key = `${String(item?.place_name || '').trim()}|${String(item?.formatted_address || '').trim()}`;
+      if (!key || key === '|') {
+        return '';
+      }
+      if (scheduleNotePhotoCache.has(key)) {
+        return scheduleNotePhotoCache.get(key) || '';
+      }
+
+      const query = [item?.place_name, item?.formatted_address].filter(Boolean).join(' ').trim();
+      if (!query) {
+        scheduleNotePhotoCache.set(key, '');
+        return '';
+      }
+
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            search_mode: 'text',
+            max_rows: 10
+          })
+        });
+
+        if (!response.ok) {
+          scheduleNotePhotoCache.set(key, '');
+          return '';
+        }
+
+        const data = await response.json();
+        const places = Array.isArray(data?.places) ? data.places : [];
+        const photoUrl = String((places.find((p) => p?.photoUrl)?.photoUrl) || '').trim();
+        scheduleNotePhotoCache.set(key, photoUrl);
+        return photoUrl;
+      } catch {
+        scheduleNotePhotoCache.set(key, '');
+        return '';
+      }
+    }
+
+    async function renderSchedulePlaceSummary(item) {
+      if (!scheduleNotePlaceSummary) {
+        return;
+      }
+
+      const requestId = ++scheduleNotePhotoRequestId;
+      scheduleNotePlaceSummary.innerHTML = buildSchedulePlaceSummaryHtml(item, { photoState: 'loading' });
+
+      const photoUrl = await fetchSchedulePlacePhotoUrl(item);
+      if (requestId !== scheduleNotePhotoRequestId) {
+        return;
+      }
+
+      scheduleNotePlaceSummary.innerHTML = buildSchedulePlaceSummaryHtml(item, {
+        photoUrl,
+        photoState: 'done'
+      });
     }
 
     function closeScheduleNoteModal() {
@@ -1613,7 +1763,7 @@
       }
     }
 
-    function openScheduleNoteModal(scheduleId) {
+    async function openScheduleNoteModal(scheduleId) {
       const selectedId = Number(scheduleId);
       const item = currentScheduleItems.find((x) => Number(x.id) === selectedId);
       if (!item) {
@@ -1624,11 +1774,14 @@
       editingScheduleId = selectedId;
       currentScheduleNoteItem = item;
       const parsed = parseScheduleNote(item.note);
+      if (parsed.photo) {
+        currentScheduleNoteItem.photoUrl = parsed.photo;
+      }
       scheduleNoteTitle.textContent = `일정 메모: ${item.place_name || ''}`;
       scheduleNoteMemo.value = parsed.memo;
-      renderSchedulePlaceSummary(item);
       renderScheduleNotePreview(parsed.memo);
       scheduleNoteModal.hidden = false;
+      await renderSchedulePlaceSummary(item);
     }
 
     function normalizeExternalUrl(rawUrl) {
@@ -1644,8 +1797,10 @@
 
     function openScheduleLinkNow() {
       const memoUrls = extractUrls(scheduleNoteMemo.value);
+      const parsed = parseScheduleNote(currentScheduleNoteItem?.note || '');
+      const parsedLink = String(parsed.link || '').trim();
       const fallbackUrl = String(currentScheduleNoteItem?.google_maps_uri || '').trim();
-      const url = normalizeExternalUrl(memoUrls[0] || fallbackUrl);
+      const url = normalizeExternalUrl(parsedLink || memoUrls[0] || fallbackUrl);
       if (!url) {
         statusText.textContent = '메모 안에 링크가 없고, 구글맵 정보도 없습니다.';
         return;
@@ -1670,7 +1825,31 @@
         return;
       }
 
-      const nextNote = String(scheduleNoteMemo.value || '').trim();
+      const memoText = String(scheduleNoteMemo.value || '').trim();
+      let photoText = String(currentScheduleNoteItem?.photoUrl || '').trim();
+      const memoUrls = extractUrls(memoText);
+      const parsedCurrent = parseScheduleNote(currentScheduleNoteItem?.note || '');
+      const linkText = normalizeExternalUrl(
+        memoUrls[0]
+        || String(parsedCurrent.link || '').trim()
+        || String(currentScheduleNoteItem?.google_maps_uri || '').trim()
+      );
+
+      if (!photoText) {
+        photoText = await fetchSchedulePlacePhotoUrl(item);
+      }
+
+      if (photoText) {
+        item.photoUrl = photoText;
+        if (currentScheduleNoteItem) {
+          currentScheduleNoteItem.photoUrl = photoText;
+        }
+      }
+
+      const nextNote = buildScheduleNoteValue(memoText, {
+        photo: photoText,
+        link: linkText
+      });
 
       const response = await fetch(`/api/trip-schedule/${encodeURIComponent(editingScheduleId)}`, {
         method: 'PUT',
@@ -2885,7 +3064,7 @@
       updateModalCityOptions();
       modalCitySelect.value = citySelect.value || '';
       modalCategory.value = placeCategorySelect.value || '';
-      manualPlaceCategory.value = modalCategory.value || 'point_of_interest';
+      manualPlaceCategory.value = 'tourist_attraction';
       photoPickerModal.hidden = false;
     }
 
@@ -2935,7 +3114,17 @@
         const url = new URL(text);
         const placePath = url.pathname.match(/\/place\/([^/]+)/i);
         if (placePath && placePath[1]) {
-          return decodeURIComponent(placePath[1]).replace(/\+/g, ' ').trim();
+          let decoded = placePath[1];
+          for (let i = 0; i < 4; i += 1) {
+            try {
+              const next = decodeURIComponent(decoded);
+              if (next === decoded) break;
+              decoded = next;
+            } catch {
+              break;
+            }
+          }
+          return decoded.replace(/\+/g, ' ').trim();
         }
 
         const q = (url.searchParams.get('q') || url.searchParams.get('query') || '').trim();
@@ -2949,6 +3138,79 @@
       return '';
     }
 
+    function normalizeExtractedPlaceName(rawText) {
+      let text = String(rawText || '').trim();
+      if (!text) {
+        return '';
+      }
+
+      for (let i = 0; i < 4; i += 1) {
+        try {
+          const next = decodeURIComponent(text);
+          if (next === text) {
+            break;
+          }
+          text = next;
+        } catch {
+          break;
+        }
+      }
+
+      text = text.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text) {
+        return '';
+      }
+
+      return text.startsWith('#') ? text : `# ${text}`;
+    }
+
+    function setManualPlacePhoto(urlText) {
+      const nextUrl = String(urlText || '').trim();
+      manualPlacePhotoUrl = nextUrl;
+
+      if (!manualPlacePhotoWrap || !manualPlacePhotoPreview) {
+        return;
+      }
+
+      if (!nextUrl) {
+        manualPlacePhotoWrap.hidden = true;
+        manualPlacePhotoPreview.removeAttribute('src');
+        return;
+      }
+
+      manualPlacePhotoPreview.src = nextUrl;
+      manualPlacePhotoWrap.hidden = false;
+    }
+
+    async function fetchFirstPhotoFromQuery(queryText) {
+      const query = String(queryText || '').replace(/^#\s*/, '').trim();
+      if (!query) {
+        return '';
+      }
+
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            search_mode: 'text',
+            max_rows: 10
+          })
+        });
+
+        if (!response.ok) {
+          return '';
+        }
+
+        const data = await readApiData(response);
+        const places = Array.isArray(data?.places) ? data.places : [];
+        return String((places.find((p) => p?.photoUrl)?.photoUrl) || '').trim();
+      } catch {
+        return '';
+      }
+    }
+
     async function fillManualPlaceFromMapsUrl() {
       const mapsUri = String(manualPlaceMaps.value || '').trim();
       if (!mapsUri) {
@@ -2958,6 +3220,8 @@
       let resolvedUrl = mapsUri;
       let coords = null;
       let extractedName = '';
+
+      setManualPlacePhoto('');
 
       try {
         const response = await fetch('/api/maps-resolve', {
@@ -2975,7 +3239,7 @@
           if (Number.isFinite(lat) && Number.isFinite(lng)) {
             coords = { lat, lng };
           }
-          extractedName = String(data.place_name || '').trim();
+          extractedName = normalizeExtractedPlaceName(data.place_name || '');
         }
       } catch {
         // Fallback parsing below.
@@ -2994,7 +3258,7 @@
       }
 
       if (!extractedName) {
-        extractedName = extractNameFromGoogleMapsUrl(resolvedUrl);
+        extractedName = normalizeExtractedPlaceName(extractNameFromGoogleMapsUrl(resolvedUrl));
       }
       if (!manualPlaceName.value.trim() && extractedName) {
         manualPlaceName.value = extractedName;
@@ -3025,6 +3289,13 @@
       } catch {
         // Address reverse lookup is best-effort only.
       }
+
+      const photoQuery = [manualPlaceName.value, manualPlaceAddress.value]
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+        .join(' ');
+      const parsedPhoto = await fetchFirstPhotoFromQuery(photoQuery);
+      setManualPlacePhoto(parsedPhoto);
 
       photoPickerStatus.textContent = '링크 기반 자동 채우기 완료. 값 확인 후 저장하세요.';
     }
@@ -3059,21 +3330,24 @@
       const payload = {
         trip_id: tripId,
         place_name: placeName,
-        place_category: (manualPlaceCategory.value || modalCategory.value || placeCategorySelect.value || 'point_of_interest').trim().toLowerCase(),
+        place_category: (manualPlaceCategory.value || modalCategory.value || placeCategorySelect.value || 'tourist_attraction').trim().toLowerCase(),
         formatted_address: formattedAddress,
         google_maps_uri: mapsUri,
         latitude,
         longitude,
-        memo: ''
+        memo: buildScheduleNoteValue('', {
+          photo: manualPlacePhotoUrl
+        })
       };
 
       await createTripPlace(payload, `직접 입력 장소 저장: ${placeName}`);
       manualPlaceName.value = '';
       manualPlaceAddress.value = '';
       manualPlaceMaps.value = '';
-      manualPlaceCategory.value = modalCategory.value || 'point_of_interest';
+      manualPlaceCategory.value = 'tourist_attraction';
       manualPlaceLat.value = '';
       manualPlaceLng.value = '';
+      setManualPlacePhoto('');
     }
 
     function renderPhotoPickerResults(items) {
