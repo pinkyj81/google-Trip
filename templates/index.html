@@ -717,6 +717,11 @@
       gap: 10px;
       margin-bottom: 12px;
     }
+    .planner-title-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
     .trip-meta {
       color: #4f5a4f;
       font-size: 13px;
@@ -732,6 +737,9 @@
       align-items: end;
     }
     .trip-open-manage-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 10px;
       min-height: 36px;
       padding: 8px 12px;
@@ -813,6 +821,9 @@
       box-shadow: var(--shadow);
       padding: 16px;
     }
+    #photoPickerModal .modal-panel {
+      width: min(620px, calc(100% - 12px));
+    }
     .modal-head {
       display: flex;
       justify-content: space-between;
@@ -829,6 +840,21 @@
       display: grid;
       gap: 10px;
       margin-bottom: 10px;
+    }
+    .photo-picker-mode-row {
+      display: flex;
+      gap: 10px;
+      margin: 4px 0 12px;
+      flex-wrap: wrap;
+    }
+    .photo-picker-mode-btn {
+      min-width: 128px;
+    }
+    .photo-picker-mode-btn.is-active {
+      background: linear-gradient(135deg, #355070 0%, #29405a 100%);
+    }
+    .photo-picker-section[hidden] {
+      display: none;
     }
     .modal-results {
       display: grid;
@@ -872,6 +898,16 @@
       font-size: 13px;
       box-shadow: none;
     }
+    .manual-place-bottom-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .manual-place-reset-btn {
+      background: linear-gradient(135deg, #7d8794 0%, #646d79 100%);
+      box-shadow: 0 10px 20px rgba(100, 109, 121, 0.2);
+    }
     .manual-place-photo-wrap {
       display: grid;
       gap: 6px;
@@ -893,10 +929,16 @@
       border-radius: 12px;
       background: #fff;
       padding: 10px;
+      width: 50%;
+      min-width: 320px;
+      max-width: 520px;
+      justify-self: center;
     }
     .picker-photo {
       width: 100%;
-      height: 160px;
+      aspect-ratio: 4 / 5;
+      min-height: 320px;
+      max-height: 520px;
       object-fit: cover;
       border-radius: 10px;
       border: 1px solid #e4dccf;
@@ -906,6 +948,16 @@
     .picker-card.active {
       border-color: #c16630;
       box-shadow: 0 0 0 2px rgba(193, 102, 48, 0.18);
+    }
+
+    @media (max-width: 900px) {
+      .picker-card {
+        width: 100%;
+        min-width: 0;
+      }
+      #photoPickerModal .modal-panel {
+        width: min(100%, calc(100% - 12px));
+      }
     }
     .picker-check-btn {
       border: 1px solid #d7cabc;
@@ -924,6 +976,11 @@
     .picker-check-btn:hover {
       transform: none;
       background: #fff8f2;
+    }
+    .picker-check-btn[aria-pressed="true"] {
+      color: #c54856;
+      border-color: #d7a5ad;
+      background: #fff0f3;
     }
     .trip-manage-panel {
       width: min(560px, calc(100% - 12px));
@@ -983,11 +1040,38 @@
       background: rgba(255, 255, 255, 0.72);
       padding: 12px;
     }
+    .note-place-summary-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .note-place-summary-head strong {
+      font-size: 16px;
+    }
+    .note-edit-toggle-btn {
+      padding: 6px 10px;
+      border-radius: 8px;
+      box-shadow: none;
+      font-size: 12px;
+    }
     .note-place-summary-item {
       display: grid;
-      gap: 4px;
+      grid-template-columns: 88px minmax(0, 1fr);
+      align-items: start;
+      column-gap: 10px;
       font-size: 14px;
       line-height: 1.45;
+    }
+    .note-place-label {
+      color: #5f6757;
+      font-weight: 700;
+      white-space: nowrap;
+      padding-top: 2px;
+    }
+    .note-place-value {
+      min-width: 0;
+      word-break: break-word;
     }
     .note-place-summary-item strong {
       font-size: 15px;
@@ -996,10 +1080,13 @@
       color: #355070;
       word-break: break-all;
     }
+    .note-place-summary-item[data-edit-target] .note-place-value {
+      cursor: text;
+    }
     .note-place-photo {
       display: block;
-      width: 100%;
-      max-height: 220px;
+      width: min(320px, 100%);
+      aspect-ratio: 4 / 5;
       object-fit: cover;
       border-radius: 10px;
       border: 1px solid #ddd0bd;
@@ -1008,6 +1095,26 @@
     .note-preview-wrap {
       display: grid;
       gap: 6px;
+    }
+    .note-coord-edit {
+      display: grid;
+      gap: 8px;
+      border: 1px solid #e2d7c8;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.72);
+      padding: 12px;
+    }
+    .note-coord-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .note-coord-save-btn {
+      justify-self: end;
+      padding: 9px 12px;
+      border-radius: 10px;
+      box-shadow: none;
+      font-size: 13px;
     }
     .note-preview {
       border: 1px solid #e2d7c8;
@@ -1072,6 +1179,116 @@
       border-color: rgba(138, 28, 28, 0.18);
       background: rgba(255, 240, 238, 0.9);
     }
+    body.blue-theme {
+      --bg: #e9f3ff;
+      --panel: rgba(247, 251, 255, 0.9);
+      --ink: #12355a;
+      --muted: #456789;
+      --accent: #2f78d8;
+      --accent-dark: #1c4f93;
+      --line: rgba(35, 91, 154, 0.2);
+      --shadow: 0 18px 34px rgba(26, 72, 126, 0.16);
+      background:
+        radial-gradient(circle at top left, rgba(103, 172, 255, 0.22), transparent 34%),
+        radial-gradient(circle at top right, rgba(62, 133, 214, 0.2), transparent 30%),
+        linear-gradient(140deg, #f1f8ff 0%, #deecfb 55%, #d2e4f9 100%);
+    }
+    body.blue-theme .planner-card,
+    body.blue-theme .hero-panel,
+    body.blue-theme .form-panel,
+    body.blue-theme .result-card,
+    body.blue-theme .table-wrap {
+      border-color: rgba(45, 104, 175, 0.18);
+      background: rgba(248, 252, 255, 0.92);
+      box-shadow: 0 16px 30px rgba(24, 70, 122, 0.12);
+    }
+    body.blue-theme input,
+    body.blue-theme select,
+    body.blue-theme textarea,
+    body.blue-theme .trip-flight-summary,
+    body.blue-theme .planner-list,
+    body.blue-theme .schedule-map {
+      border-color: rgba(50, 109, 180, 0.2);
+      background: #f8fbff;
+      color: #1a426b;
+    }
+    body.blue-theme .schedule-map-wrap {
+      border-color: rgba(50, 109, 180, 0.22);
+      background: #f6faff;
+    }
+    body.blue-theme .schedule-map-head {
+      background: #eaf3ff;
+      border-bottom-color: rgba(50, 109, 180, 0.22);
+      color: #2a5e93;
+    }
+    body.blue-theme .map-legend {
+      background: #f4f9ff;
+      border-top-color: rgba(50, 109, 180, 0.2);
+    }
+    body.blue-theme .timetable-drop-hint,
+    body.blue-theme #scheduleMapStatus {
+      color: #4f78a6;
+    }
+    body.blue-theme thead th {
+      background: #e7f1fc;
+      color: #1f4e7f;
+    }
+    body.blue-theme th,
+    body.blue-theme td {
+      border-bottom-color: #dbe8f7;
+    }
+    body.blue-theme button,
+    body.blue-theme .trip-open-manage-btn {
+      background: linear-gradient(135deg, #2f78d8 0%, #1f5fb5 100%);
+      box-shadow: 0 12px 24px rgba(31, 95, 181, 0.24);
+    }
+    body.blue-theme .secondary-btn {
+      background: linear-gradient(135deg, #4a94f0 0%, #2f78d8 100%);
+      box-shadow: 0 12px 24px rgba(47, 120, 216, 0.22);
+    }
+    body.blue-theme .raw-btn,
+    body.blue-theme .table-btn {
+      background: linear-gradient(135deg, #3b84e0 0%, #2a6dc0 100%);
+      box-shadow: 0 12px 24px rgba(42, 109, 192, 0.22);
+    }
+    body.blue-theme .modal-backdrop {
+      background: rgba(16, 44, 84, 0.4);
+    }
+    body.blue-theme .modal-panel,
+    body.blue-theme .trip-manage-panel {
+      background: #f4f9ff;
+      border-color: rgba(49, 109, 181, 0.24);
+      box-shadow: 0 18px 30px rgba(24, 70, 122, 0.2);
+    }
+    body.blue-theme .manual-place-box,
+    body.blue-theme .picker-card,
+    body.blue-theme .trip-modal-card,
+    body.blue-theme .note-place-summary,
+    body.blue-theme .note-coord-edit,
+    body.blue-theme .note-preview {
+      background: #f8fbff;
+      border-color: #cfe1f4;
+    }
+    body.blue-theme .modal-head,
+    body.blue-theme .trip-modal-meta,
+    body.blue-theme .note-place-label {
+      color: #2f628e;
+    }
+    body.blue-theme .trip-modal-edit-btn {
+      background: #eaf2fc;
+      border-color: #c5d9ef;
+      color: #24598d;
+    }
+    body.blue-theme .trip-modal-delete-btn {
+      background: #eef5ff;
+      border-color: #d3e2f4;
+      color: #3a6394;
+    }
+    body.blue-theme .picker-check-btn[aria-pressed="true"] {
+      color: #2f78d8;
+      border-color: #9ec4ee;
+      background: #eaf3ff;
+    }
     @media (max-width: 900px) {
       .hero {
         grid-template-columns: 1fr;
@@ -1106,6 +1323,12 @@
       .trip-create-row {
         grid-template-columns: 1fr;
       }
+      .note-place-summary-item {
+        grid-template-columns: 72px minmax(0, 1fr);
+      }
+      .note-coord-grid {
+        grid-template-columns: 1fr;
+      }
       .trip-title-row {
         grid-template-columns: 1fr;
       }
@@ -1135,7 +1358,7 @@
     }
   </style>
 </head>
-<body>
+<body class="blue-theme">
   <div class="shell">
     <section id="searchArea" class="hero">
       <div class="hero-panel">
@@ -1156,14 +1379,22 @@
             <select id="countryCode" name="country_code" required>
               <option value="">전체 국가</option>
               <option value="KR">대한민국 (KR)</option>
-              <option value="FR">프랑스 (FR)</option>
-              <option value="JP">일본 (JP)</option>
               <option value="US">미국 (US)</option>
               <option value="GB">영국 (GB)</option>
+              <option value="FR">프랑스 (FR)</option>
+              <option value="JP">일본 (JP)</option>
               <option value="IT">이탈리아 (IT)</option>
               <option value="ES">스페인 (ES)</option>
               <option value="DE">독일 (DE)</option>
-              <option value="TH">태국 (TH)</option>
+              <option value="CZ">체코 (CZ)</option>
+              <option value="HU">헝가리 (HU)</option>
+              <option value="PL">폴란드 (PL)</option>
+              <option value="TR">터키 (TR)</option>
+              <option value="SG">싱가포르 (SG)</option>
+              <option value="MY">말레이시아 (MY)</option>
+              <option value="HK">홍콩 (HK)</option>
+              <option value="MO">마카오 (MO)</option>
+              <option value="CN">중국 (CN)</option>
             </select>
           </div>
           <div>
@@ -1225,7 +1456,10 @@
       <article id="schedulePlannerCard" class="planner-card">
         <div class="planner-title-row">
           <h2 class="planner-title" style="margin:0;">My itinerary</h2>
-          <button id="openTripManageBtn" type="button" class="trip-open-manage-btn">여행만들기</button>
+          <div class="planner-title-actions">
+            <button id="openTripManageBtn" type="button" class="trip-open-manage-btn">여행만들기</button>
+            <a href="/trip-info" class="trip-open-manage-btn">여행 정보</a>
+          </div>
         </div>
         <form id="tripPlaceForm">
           <div>
@@ -1234,7 +1468,7 @@
               <select id="tripSelectForPlace" required>
                 <option value="">여행을 먼저 생성하세요</option>
               </select>
-              <button type="button" id="openPhotoPickerBtn">사진 보기</button>
+              <button type="button" id="openPhotoPickerBtn">장소등록</button>
             </div>
             <div id="tripFlightSummary" class="trip-flight-summary">선택한 여행의 비행기 정보가 여기에 표시됩니다.</div>
           </div>
@@ -1309,26 +1543,39 @@
       <div class="modal-backdrop" id="photoPickerBackdrop"></div>
       <div class="modal-panel">
         <div class="modal-head">
-          <strong id="photoPickerTripLabel">여행 사진 선택</strong>
+          <strong id="photoPickerTripLabel">여행 장소등록</strong>
           <div class="modal-actions">
             <button type="button" id="savePickedPlaceBtn">저장하기</button>
             <button type="button" id="closePhotoPickerBtn" class="mini-btn cancel" aria-label="닫기">✕</button>
           </div>
         </div>
-        <form id="photoPickerSearchForm" class="modal-form">
+        <div class="photo-picker-mode-row">
+          <button type="button" id="startParseModeBtn" class="photo-picker-mode-btn">파싱하기</button>
+          <button type="button" id="startGoogleModeBtn" class="photo-picker-mode-btn">구글API</button>
+        </div>
+        <div id="photoPickerStatus" class="note">시작 방식을 선택하세요.</div>
+        <form id="photoPickerSearchForm" class="modal-form photo-picker-section" hidden>
           <div>
             <label for="modalCountry">국가 선택</label>
             <select id="modalCountry" required>
               <option value="">국가를 선택하세요</option>
               <option value="KR">대한민국 (KR)</option>
-              <option value="FR">프랑스 (FR)</option>
-              <option value="JP">일본 (JP)</option>
               <option value="US">미국 (US)</option>
               <option value="GB">영국 (GB)</option>
+              <option value="FR">프랑스 (FR)</option>
+              <option value="JP">일본 (JP)</option>
               <option value="IT">이탈리아 (IT)</option>
               <option value="ES">스페인 (ES)</option>
               <option value="DE">독일 (DE)</option>
-              <option value="TH">태국 (TH)</option>
+              <option value="CZ">체코 (CZ)</option>
+              <option value="HU">헝가리 (HU)</option>
+              <option value="PL">폴란드 (PL)</option>
+              <option value="TR">터키 (TR)</option>
+              <option value="SG">싱가포르 (SG)</option>
+              <option value="MY">말레이시아 (MY)</option>
+              <option value="HK">홍콩 (HK)</option>
+              <option value="MO">마카오 (MO)</option>
+              <option value="CN">중국 (CN)</option>
             </select>
           </div>
           <div>
@@ -1354,8 +1601,7 @@
             <button type="submit">검색</button>
           </div>
         </form>
-        <div id="photoPickerStatus" class="note">검색 후 장소를 선택하세요.</div>
-        <div class="manual-place-box">
+        <div id="manualPlaceBox" class="manual-place-box photo-picker-section" hidden>
           <h4>원하는 장소 직접 입력</h4>
           <div>
             <label for="manualPlaceMaps">Google Maps 링크(먼저 입력)</label>
@@ -1397,9 +1643,12 @@
               <input id="manualPlaceLng" placeholder="141.3545" />
             </div>
           </div>
-          <button type="button" id="saveManualPlaceBtn">직접 입력 저장</button>
+          <div class="manual-place-bottom-actions">
+            <button type="button" id="resetManualPlaceBtn" class="manual-place-reset-btn">초기화</button>
+            <button type="button" id="saveManualPlaceBtn">직접 입력 저장</button>
+          </div>
         </div>
-        <div id="photoPickerResults" class="modal-results"></div>
+        <div id="photoPickerResults" class="modal-results photo-picker-section" hidden></div>
       </div>
     </section>
 
@@ -1447,7 +1696,52 @@
           <button type="button" id="closeScheduleNoteBtn" class="mini-btn cancel" aria-label="닫기">✕</button>
         </div>
         <div class="note-link-row">
-          <div id="scheduleNotePlaceSummary" class="note-place-summary"></div>
+          <div class="note-place-summary">
+            <div class="note-place-summary-head">
+              <strong>기본정보</strong>
+              <button type="button" id="openScheduleEditBtn" class="note-edit-toggle-btn">수정</button>
+            </div>
+            <div id="scheduleNotePlaceSummary"></div>
+          </div>
+          <div id="schedulePlaceEditPanel" class="note-coord-edit" hidden>
+            <label>장소 정보 수정</label>
+            <div>
+              <label for="scheduleNotePlaceName">장소명</label>
+              <input id="scheduleNotePlaceName" placeholder="예: 콜로세움" />
+            </div>
+            <div>
+              <label for="scheduleNoteAddress">주소</label>
+              <input id="scheduleNoteAddress" placeholder="예: Rome, Italy" />
+            </div>
+            <div>
+              <label for="scheduleNoteMapsUri">구글맵 링크</label>
+              <input id="scheduleNoteMapsUri" placeholder="https://maps.google.com/..." />
+            </div>
+            <div>
+              <label for="scheduleNoteCategory">카테고리</label>
+              <select id="scheduleNoteCategory">
+                <option value="tourist_attraction">관광명소</option>
+                <option value="historical_landmark">랜드마크</option>
+                <option value="museum">박물관</option>
+                <option value="park">공원</option>
+                <option value="lodging">호텔/숙소</option>
+                <option value="restaurant">식당</option>
+                <option value="cafe">카페</option>
+                <option value="point_of_interest">기타</option>
+              </select>
+            </div>
+            <div class="note-coord-grid">
+              <div>
+                <label for="scheduleNoteLat">위도</label>
+                <input id="scheduleNoteLat" placeholder="예: 41.890214" />
+              </div>
+              <div>
+                <label for="scheduleNoteLng">경도</label>
+                <input id="scheduleNoteLng" placeholder="예: 12.492231" />
+              </div>
+            </div>
+            <button type="button" id="saveScheduleCoordsBtn" class="note-coord-save-btn">장소 정보 저장</button>
+          </div>
           <div>
             <label for="scheduleNoteMemo">메모</label>
             <textarea id="scheduleNoteMemo" placeholder="메모를 입력하세요"></textarea>
@@ -1511,9 +1805,12 @@
     const closePhotoPickerBtn = document.getElementById('closePhotoPickerBtn');
     const savePickedPlaceBtn = document.getElementById('savePickedPlaceBtn');
     const photoPickerTripLabel = document.getElementById('photoPickerTripLabel');
+    const startParseModeBtn = document.getElementById('startParseModeBtn');
+    const startGoogleModeBtn = document.getElementById('startGoogleModeBtn');
     const photoPickerSearchForm = document.getElementById('photoPickerSearchForm');
     const photoPickerStatus = document.getElementById('photoPickerStatus');
     const photoPickerResults = document.getElementById('photoPickerResults');
+    const manualPlaceBox = document.getElementById('manualPlaceBox');
     const manualPlaceName = document.getElementById('manualPlaceName');
     const manualPlaceAddress = document.getElementById('manualPlaceAddress');
     const manualPlaceMaps = document.getElementById('manualPlaceMaps');
@@ -1523,6 +1820,7 @@
     const manualPlacePhotoWrap = document.getElementById('manualPlacePhotoWrap');
     const manualPlacePhotoPreview = document.getElementById('manualPlacePhotoPreview');
     const fillManualFromMapsBtn = document.getElementById('fillManualFromMapsBtn');
+    const resetManualPlaceBtn = document.getElementById('resetManualPlaceBtn');
     const saveManualPlaceBtn = document.getElementById('saveManualPlaceBtn');
     const tripManageModal = document.getElementById('tripManageModal');
     const tripManageBackdrop = document.getElementById('tripManageBackdrop');
@@ -1535,6 +1833,15 @@
     const scheduleNoteMemo = document.getElementById('scheduleNoteMemo');
     const scheduleNotePreview = document.getElementById('scheduleNotePreview');
     const scheduleNotePlaceSummary = document.getElementById('scheduleNotePlaceSummary');
+    const openScheduleEditBtn = document.getElementById('openScheduleEditBtn');
+    const schedulePlaceEditPanel = document.getElementById('schedulePlaceEditPanel');
+    const scheduleNotePlaceName = document.getElementById('scheduleNotePlaceName');
+    const scheduleNoteAddress = document.getElementById('scheduleNoteAddress');
+    const scheduleNoteMapsUri = document.getElementById('scheduleNoteMapsUri');
+    const scheduleNoteCategory = document.getElementById('scheduleNoteCategory');
+    const scheduleNoteLat = document.getElementById('scheduleNoteLat');
+    const scheduleNoteLng = document.getElementById('scheduleNoteLng');
+    const saveScheduleCoordsBtn = document.getElementById('saveScheduleCoordsBtn');
     const saveScheduleNoteBtn = document.getElementById('saveScheduleNoteBtn');
     const openScheduleLinkBtn = document.getElementById('openScheduleLinkBtn');
     const scheduleMapEl = document.getElementById('scheduleMap');
@@ -1563,6 +1870,7 @@
     let editingScheduleId = null;
     let currentScheduleNoteItem = null;
     let manualPlacePhotoUrl = '';
+    let photoPickerMode = '';
     const scheduleNotePhotoCache = new Map();
     let scheduleNotePhotoRequestId = 0;
     let scheduleMapSyncRaf = 0;
@@ -1592,7 +1900,7 @@
 
       const filtered = lines.filter((line) => !line.startsWith('[LINK]') && !line.startsWith('[PHOTO]'));
       return {
-        memo: filtered.join('\n') || text,
+        memo: filtered.join('\n'),
         photo,
         link,
       };
@@ -1658,6 +1966,15 @@
     function buildSchedulePlaceSummaryHtml(item, options = {}) {
       const name = escapeHtml(item?.place_name || '');
       const address = escapeHtml(item?.formatted_address || '');
+      const rawLat = Number(item?.latitude);
+      const rawLng = Number(item?.longitude);
+      const hasCoords = Number.isFinite(rawLat) && Number.isFinite(rawLng);
+      const latitudeHtml = hasCoords
+        ? escapeHtml(rawLat.toFixed(6))
+        : '<span class="empty-note">정보 없음</span>';
+      const longitudeHtml = hasCoords
+        ? escapeHtml(rawLng.toFixed(6))
+        : '<span class="empty-note">정보 없음</span>';
       const googleMapsUri = String(item?.google_maps_uri || '').trim();
       const googleMapsHtml = googleMapsUri
         ? `<a href="${escapeAttribute(googleMapsUri)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`
@@ -1672,11 +1989,71 @@
           : '<span class="empty-note">사진 없음</span>');
 
       return `
-        <div class="note-place-summary-item"><span>이름</span><strong>${name || '<span class="empty-note">정보 없음</span>'}</strong></div>
-        <div class="note-place-summary-item"><span>주소</span><div>${address || '<span class="empty-note">정보 없음</span>'}</div></div>
-        <div class="note-place-summary-item"><span>사진</span><div>${photoHtml}</div></div>
-        <div class="note-place-summary-item"><span>구글맵 정보</span><div>${googleMapsHtml}</div></div>
+        <div class="note-place-summary-item" data-edit-target="place_name"><span class="note-place-label">이름</span><strong class="note-place-value">${name || '<span class="empty-note">정보 없음</span>'}</strong></div>
+        <div class="note-place-summary-item" data-edit-target="formatted_address"><span class="note-place-label">주소</span><div class="note-place-value">${address || '<span class="empty-note">정보 없음</span>'}</div></div>
+        <div class="note-place-summary-item" data-edit-target="latitude"><span class="note-place-label">위도</span><div class="note-place-value">${latitudeHtml}</div></div>
+        <div class="note-place-summary-item" data-edit-target="longitude"><span class="note-place-label">경도</span><div class="note-place-value">${longitudeHtml}</div></div>
+        <div class="note-place-summary-item"><span class="note-place-label">사진</span><div class="note-place-value">${photoHtml}</div></div>
+        <div class="note-place-summary-item" data-edit-target="google_maps_uri"><span class="note-place-label">구글맵 정보</span><div class="note-place-value">${googleMapsHtml}</div></div>
       `;
+    }
+
+    function setScheduleEditMode(enabled) {
+      const on = Boolean(enabled);
+      if (schedulePlaceEditPanel) {
+        schedulePlaceEditPanel.hidden = !on;
+      }
+      if (openScheduleEditBtn) {
+        openScheduleEditBtn.textContent = on ? '수정 취소' : '수정';
+      }
+    }
+
+    function focusScheduleEditField(fieldKey) {
+      setScheduleEditMode(true);
+      const key = String(fieldKey || '').trim();
+      const targetMap = {
+        place_name: scheduleNotePlaceName,
+        formatted_address: scheduleNoteAddress,
+        google_maps_uri: scheduleNoteMapsUri,
+        latitude: scheduleNoteLat,
+        longitude: scheduleNoteLng,
+      };
+      const target = targetMap[key] || scheduleNotePlaceName;
+      if (!target) {
+        return;
+      }
+      target.focus();
+      if (typeof target.select === 'function') {
+        target.select();
+      }
+    }
+
+    function setScheduleCoordinateInputs(item) {
+      if (!scheduleNoteLat || !scheduleNoteLng) {
+        return;
+      }
+
+      const placeId = Number(item?.trip_place_id);
+      const placeFromList = cachedTripPlaces.find((x) => Number(x.id) === placeId) || {};
+      const category = String(placeFromList.place_category || item?.place_category || 'point_of_interest').trim().toLowerCase();
+
+      if (scheduleNotePlaceName) {
+        scheduleNotePlaceName.value = String(item?.place_name || '');
+      }
+      if (scheduleNoteAddress) {
+        scheduleNoteAddress.value = String(item?.formatted_address || '');
+      }
+      if (scheduleNoteMapsUri) {
+        scheduleNoteMapsUri.value = String(item?.google_maps_uri || '');
+      }
+      if (scheduleNoteCategory) {
+        scheduleNoteCategory.value = category || 'point_of_interest';
+      }
+
+      const lat = Number(item?.latitude);
+      const lng = Number(item?.longitude);
+      scheduleNoteLat.value = Number.isFinite(lat) ? String(lat) : '';
+      scheduleNoteLng.value = Number.isFinite(lng) ? String(lng) : '';
     }
 
     async function fetchSchedulePlacePhotoUrl(item) {
@@ -1761,6 +2138,25 @@
       if (scheduleNotePlaceSummary) {
         scheduleNotePlaceSummary.innerHTML = '';
       }
+      setScheduleEditMode(false);
+      if (scheduleNotePlaceName) {
+        scheduleNotePlaceName.value = '';
+      }
+      if (scheduleNoteAddress) {
+        scheduleNoteAddress.value = '';
+      }
+      if (scheduleNoteMapsUri) {
+        scheduleNoteMapsUri.value = '';
+      }
+      if (scheduleNoteCategory) {
+        scheduleNoteCategory.value = 'point_of_interest';
+      }
+      if (scheduleNoteLat) {
+        scheduleNoteLat.value = '';
+      }
+      if (scheduleNoteLng) {
+        scheduleNoteLng.value = '';
+      }
     }
 
     async function openScheduleNoteModal(scheduleId) {
@@ -1779,9 +2175,95 @@
       }
       scheduleNoteTitle.textContent = `일정 메모: ${item.place_name || ''}`;
       scheduleNoteMemo.value = parsed.memo;
+      setScheduleCoordinateInputs(item);
       renderScheduleNotePreview(parsed.memo);
       scheduleNoteModal.hidden = false;
+      setScheduleEditMode(false);
       await renderSchedulePlaceSummary(item);
+    }
+
+    async function saveScheduleCoordinates() {
+      if (!currentScheduleNoteItem || !currentScheduleNoteItem.trip_place_id) {
+        throw new Error('수정할 장소 정보를 찾지 못했습니다.');
+      }
+
+      const placeName = String(scheduleNotePlaceName?.value || '').trim();
+      const formattedAddress = String(scheduleNoteAddress?.value || '').trim();
+      const googleMapsUri = String(scheduleNoteMapsUri?.value || '').trim();
+      const placeCategory = String(scheduleNoteCategory?.value || 'point_of_interest').trim().toLowerCase();
+      if (!placeName) {
+        throw new Error('장소명을 입력하세요.');
+      }
+
+      const latitude = parseManualCoordinate(scheduleNoteLat.value, '위도', -90, 90);
+      const longitude = parseManualCoordinate(scheduleNoteLng.value, '경도', -180, 180);
+
+      if ((latitude === null) !== (longitude === null)) {
+        throw new Error('위도와 경도는 함께 입력하거나 함께 비워야 합니다.');
+      }
+
+      const response = await fetch(`/api/trip-places/${encodeURIComponent(currentScheduleNoteItem.trip_place_id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          place_name: placeName,
+          formatted_address: formattedAddress,
+          google_maps_uri: googleMapsUri,
+          place_category: placeCategory,
+          latitude,
+          longitude
+        })
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '장소 정보 저장 실패');
+      }
+
+      const updated = data.place || {};
+      currentScheduleNoteItem.place_name = updated.place_name;
+      currentScheduleNoteItem.formatted_address = updated.formatted_address;
+      currentScheduleNoteItem.google_maps_uri = updated.google_maps_uri;
+      currentScheduleNoteItem.place_category = updated.place_category;
+      currentScheduleNoteItem.latitude = updated.latitude;
+      currentScheduleNoteItem.longitude = updated.longitude;
+
+      const placeId = Number(currentScheduleNoteItem.trip_place_id);
+      currentScheduleItems.forEach((item) => {
+        if (Number(item.trip_place_id) === placeId) {
+          item.place_name = updated.place_name;
+          item.formatted_address = updated.formatted_address;
+          item.google_maps_uri = updated.google_maps_uri;
+          item.place_category = updated.place_category;
+          item.latitude = updated.latitude;
+          item.longitude = updated.longitude;
+        }
+      });
+      cachedTripPlaces.forEach((item) => {
+        if (Number(item.id) === placeId) {
+          item.place_name = updated.place_name;
+          item.formatted_address = updated.formatted_address;
+          item.google_maps_uri = updated.google_maps_uri;
+          item.place_category = updated.place_category;
+          item.latitude = updated.latitude;
+          item.longitude = updated.longitude;
+        }
+      });
+
+      const activeTripId = String(currentScheduleNoteItem.trip_id || tripSelectForSchedule.value || tripSelectForPlace.value || '');
+      if (activeTripId) {
+        await loadTripPlacesByTrip(activeTripId);
+        await loadTripScheduleByTrip(activeTripId, scheduleDate.value || '');
+        const refreshed = currentScheduleItems.find((x) => Number(x.id) === Number(editingScheduleId));
+        if (refreshed) {
+          currentScheduleNoteItem = refreshed;
+        }
+      }
+
+      scheduleNoteTitle.textContent = `일정 메모: ${currentScheduleNoteItem.place_name || ''}`;
+      setScheduleCoordinateInputs(currentScheduleNoteItem);
+      await renderSchedulePlaceSummary(currentScheduleNoteItem);
+      statusText.textContent = '장소 정보 저장 완료';
+      setScheduleEditMode(false);
     }
 
     function normalizeExternalUrl(rawUrl) {
@@ -1915,9 +2397,20 @@
     }
 
     function getDateColor(index, total) {
-      const safeTotal = Math.max(total, 1);
-      const hue = Math.round((index * 360) / safeTotal);
-      return `hsl(${hue} 62% 62%)`;
+      const highContrastPalette = [
+        '#D1495B', // rose red
+        '#1D4ED8', // strong blue
+        '#B45309', // amber brown
+        '#7C3AED', // violet
+        '#0F766E', // deep teal
+        '#C2410C', // burnt orange
+        '#BE123C', // crimson
+        '#0369A1', // cyan blue
+        '#854D0E', // mustard brown
+        '#334155', // slate
+      ];
+      const safeIndex = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0;
+      return highContrastPalette[safeIndex % highContrastPalette.length];
     }
 
     function parseGoogleMapsCoordinates(uri) {
@@ -1926,17 +2419,88 @@
         return null;
       }
 
-      let match = text.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-      if (match) {
-        return { lat: Number(match[1]), lng: Number(match[2]) };
+      // Prefer place-detail coordinates over map-center coordinates.
+      const dMatches = Array.from(text.matchAll(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/g));
+      if (dMatches.length > 0) {
+        const last = dMatches[dMatches.length - 1];
+        return { lat: Number(last[1]), lng: Number(last[2]) };
       }
 
-      match = text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+      const match = text.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
       if (match) {
         return { lat: Number(match[1]), lng: Number(match[2]) };
       }
 
       return null;
+    }
+
+    function squaredDistance(a, b) {
+      if (!a || !b) {
+        return Number.POSITIVE_INFINITY;
+      }
+      const dLat = Number(a.lat) - Number(b.lat);
+      const dLng = Number(a.lng) - Number(b.lng);
+      return (dLat * dLat) + (dLng * dLng);
+    }
+
+    async function fetchBestPlaceFromQuery(queryText, baseCoords = null) {
+      const query = String(queryText || '').replace(/^#\s*/, '').trim();
+      if (!query) {
+        return null;
+      }
+
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            search_mode: 'text',
+            max_rows: 20
+          })
+        });
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const data = await readApiData(response);
+        const places = Array.isArray(data?.places) ? data.places : [];
+        if (!places.length) {
+          return null;
+        }
+
+        const candidates = places.map((item) => {
+          const lat = Number(item?.latitude);
+          const lng = Number(item?.longitude);
+          const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+          const hasPhoto = Boolean(String(item?.photoUrl || '').trim());
+          const distance = hasCoords && baseCoords ? squaredDistance({ lat, lng }, baseCoords) : 0;
+          return {
+            item,
+            hasCoords,
+            hasPhoto,
+            distance,
+          };
+        });
+
+        candidates.sort((a, b) => {
+          if (a.hasCoords !== b.hasCoords) {
+            return a.hasCoords ? -1 : 1;
+          }
+          if (a.distance !== b.distance) {
+            return a.distance - b.distance;
+          }
+          if (a.hasPhoto !== b.hasPhoto) {
+            return a.hasPhoto ? -1 : 1;
+          }
+          return 0;
+        });
+
+        return candidates[0]?.item || null;
+      } catch {
+        return null;
+      }
     }
 
     async function geocodeAddress(address) {
@@ -2164,16 +2728,24 @@
     }
 
     const CITY_OPTIONS = {
-      KR: ['서울', '부산', '인천', '대구', '광주', '대전', '울산', '제주', '김해'],
-      FR: ['Paris', 'Lyon', 'Marseille', 'Nice', 'Bordeaux', 'Strasbourg'],
-      JP: ['Tokyo', 'Osaka', 'Kyoto', 'Fukuoka', 'Sapporo', 'Nara'],
-      US: ['New York', 'Los Angeles', 'San Francisco', 'Seattle', 'Chicago', 'Las Vegas'],
-      GB: ['London', 'Manchester', 'Edinburgh', 'Liverpool', 'Bristol'],
-      IT: ['Rome', 'Milan', 'Florence', 'Venice', 'Naples'],
-      ES: ['Madrid', 'Barcelona', 'Seville', 'Valencia', 'Bilbao'],
-      DE: ['Berlin', 'Munich', 'Hamburg', 'Cologne', 'Frankfurt'],
-      TH: ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya', 'Krabi'],
-      '': ['Paris', 'Tokyo', 'Seoul', 'Bangkok', 'London']
+      KR: ['서울', '제주'],
+      US: ['뉴욕', '보스턴', '시카고', 'LA'],
+      GB: ['맨체스터', '런던'],
+      FR: ['라데팡스', '파리', '리브고슈', '베르시'],
+      IT: ['로마', '피렌체', '시에나', '볼로나', '베네치아', '폼페이'],
+      ES: ['바르셀로나', '세고비아'],
+      DE: ['베를린', '라이프치히', '드레스덴', '뤼베나우'],
+      CZ: ['프라하'],
+      HU: ['부다페스트'],
+      PL: ['바르샤바', '크라쿠프', '비엘리치카'],
+      TR: ['이스탄불'],
+      SG: ['싱가포르'],
+      MY: ['쿠알라룸푸르', '푸트라자야'],
+      HK: ['홍콩'],
+      MO: ['마카오'],
+      CN: ['상해'],
+      JP: ['도쿄'],
+      '': ['로마', '파리', '바르셀로나', '도쿄', '서울']
     };
 
     function updateCityOptions() {
@@ -3053,18 +3625,18 @@
 
       const trip = cachedTrips.find((item) => String(item.id) === String(tripId));
       photoPickerTripLabel.textContent = trip
-        ? `여행 사진 선택: ${trip.title}`
-        : '여행 사진 선택';
+        ? `여행 장소등록: ${trip.title}`
+        : '여행 장소등록';
 
       selectedPickedPlaces = new Map();
       photoPickerResults.innerHTML = '';
-      photoPickerStatus.textContent = '검색 후 장소를 선택하세요.';
       savePickedPlaceBtn.disabled = true;
       modalCountry.value = countryCodeSelect.value || '';
       updateModalCityOptions();
       modalCitySelect.value = citySelect.value || '';
       modalCategory.value = placeCategorySelect.value || '';
-      manualPlaceCategory.value = 'tourist_attraction';
+      resetManualPlaceFields({ keepStatus: true });
+      setPhotoPickerMode('');
       photoPickerModal.hidden = false;
     }
 
@@ -3182,6 +3754,53 @@
       manualPlacePhotoWrap.hidden = false;
     }
 
+    function resetManualPlaceFields(options = {}) {
+      const keepStatus = Boolean(options.keepStatus);
+
+      manualPlaceName.value = '';
+      manualPlaceAddress.value = '';
+      manualPlaceMaps.value = '';
+      manualPlaceCategory.value = 'tourist_attraction';
+      manualPlaceLat.value = '';
+      manualPlaceLng.value = '';
+      setManualPlacePhoto('');
+
+      if (!keepStatus) {
+        photoPickerStatus.textContent = '입력값을 초기화했습니다. 링크를 다시 넣어 자동 채우기 하거나 직접 입력하세요.';
+      }
+    }
+
+    function setPhotoPickerMode(mode = '') {
+      photoPickerMode = mode;
+
+      const isParse = mode === 'parse';
+      const isGoogle = mode === 'google';
+
+      if (manualPlaceBox) {
+        manualPlaceBox.hidden = !isParse;
+      }
+      if (photoPickerSearchForm) {
+        photoPickerSearchForm.hidden = !isGoogle;
+      }
+      if (photoPickerResults) {
+        photoPickerResults.hidden = !isGoogle;
+        if (!isGoogle) {
+          photoPickerResults.innerHTML = '';
+        }
+      }
+
+      startParseModeBtn?.classList.toggle('is-active', isParse);
+      startGoogleModeBtn?.classList.toggle('is-active', isGoogle);
+
+      if (isParse) {
+        photoPickerStatus.textContent = 'Google Maps 링크를 넣고 파싱을 시작하세요.';
+      } else if (isGoogle) {
+        photoPickerStatus.textContent = '국가, 도시, 카테고리를 고른 뒤 검색하세요.';
+      } else {
+        photoPickerStatus.textContent = '시작 방식을 선택하세요.';
+      }
+    }
+
     async function fetchFirstPhotoFromQuery(queryText) {
       const query = String(queryText || '').replace(/^#\s*/, '').trim();
       if (!query) {
@@ -3272,30 +3891,60 @@
       manualPlaceLat.value = String(coords.lat);
       manualPlaceLng.value = String(coords.lng);
 
-      try {
-        const endpoint = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(coords.lat)}&lon=${encodeURIComponent(coords.lng)}`;
-        const response = await fetch(endpoint, {
-          headers: { Accept: 'application/json' }
-        });
-        if (response.ok) {
-          const geo = await response.json();
-          if (!manualPlaceAddress.value.trim() && geo?.display_name) {
-            manualPlaceAddress.value = geo.display_name;
-          }
-          if (!manualPlaceName.value.trim() && geo?.name) {
-            manualPlaceName.value = String(geo.name);
-          }
+      const googleMatchedPlace = await fetchBestPlaceFromQuery(manualPlaceName.value || extractedName, coords);
+      if (googleMatchedPlace) {
+        const matchedName = typeof googleMatchedPlace.displayName === 'object'
+          ? (googleMatchedPlace.displayName?.text || '')
+          : String(googleMatchedPlace.displayName || '');
+        const matchedAddress = String(googleMatchedPlace.formattedAddress || '').trim();
+        const matchedPhoto = String(googleMatchedPlace.photoUrl || '').trim();
+        const matchedLat = Number(googleMatchedPlace.latitude);
+        const matchedLng = Number(googleMatchedPlace.longitude);
+
+        if (!manualPlaceName.value.trim() && matchedName) {
+          manualPlaceName.value = normalizeExtractedPlaceName(matchedName);
         }
-      } catch {
-        // Address reverse lookup is best-effort only.
+        if (!manualPlaceAddress.value.trim() && matchedAddress) {
+          manualPlaceAddress.value = matchedAddress;
+        }
+        if (matchedPhoto) {
+          setManualPlacePhoto(matchedPhoto);
+        }
+        if (Number.isFinite(matchedLat) && Number.isFinite(matchedLng)) {
+          manualPlaceLat.value = String(matchedLat);
+          manualPlaceLng.value = String(matchedLng);
+          coords = { lat: matchedLat, lng: matchedLng };
+        }
       }
 
-      const photoQuery = [manualPlaceName.value, manualPlaceAddress.value]
-        .map((item) => String(item || '').trim())
-        .filter(Boolean)
-        .join(' ');
-      const parsedPhoto = await fetchFirstPhotoFromQuery(photoQuery);
-      setManualPlacePhoto(parsedPhoto);
+      if (!manualPlaceAddress.value.trim()) {
+        try {
+          const endpoint = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(coords.lat)}&lon=${encodeURIComponent(coords.lng)}`;
+          const response = await fetch(endpoint, {
+            headers: { Accept: 'application/json' }
+          });
+          if (response.ok) {
+            const geo = await response.json();
+            if (!manualPlaceAddress.value.trim() && geo?.display_name) {
+              manualPlaceAddress.value = geo.display_name;
+            }
+            if (!manualPlaceName.value.trim() && geo?.name) {
+              manualPlaceName.value = String(geo.name);
+            }
+          }
+        } catch {
+          // Address reverse lookup is best-effort only.
+        }
+      }
+
+      if (!manualPlacePhotoUrl) {
+        const photoQuery = [manualPlaceName.value, manualPlaceAddress.value]
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+          .join(' ');
+        const parsedPhoto = await fetchFirstPhotoFromQuery(photoQuery);
+        setManualPlacePhoto(parsedPhoto);
+      }
 
       photoPickerStatus.textContent = '링크 기반 자동 채우기 완료. 값 확인 후 저장하세요.';
     }
@@ -3341,13 +3990,7 @@
       };
 
       await createTripPlace(payload, `직접 입력 장소 저장: ${placeName}`);
-      manualPlaceName.value = '';
-      manualPlaceAddress.value = '';
-      manualPlaceMaps.value = '';
-      manualPlaceCategory.value = 'tourist_attraction';
-      manualPlaceLat.value = '';
-      manualPlaceLng.value = '';
-      setManualPlacePhoto('');
+      resetManualPlaceFields({ keepStatus: true });
     }
 
     function renderPhotoPickerResults(items) {
@@ -3366,7 +4009,7 @@
             <strong>${escapeHtml(displayName)}</strong>
             <div class="note">${escapeHtml(item.formattedAddress || '')}</div>
             <div class="mini-btn-row" style="margin-top:8px;">
-              <button type="button" class="picker-check-btn js-pick-place" data-picker-index="${index}" title="선택" aria-pressed="false">□</button>
+              <button type="button" class="picker-check-btn js-pick-place" data-picker-index="${index}" title="찜" aria-label="찜" aria-pressed="false">♡</button>
             </div>
           </article>
         `;
@@ -3381,14 +4024,14 @@
             if (activeCard) {
               activeCard.classList.remove('active');
             }
-            event.currentTarget.textContent = '□';
+            event.currentTarget.textContent = '♡';
             event.currentTarget.setAttribute('aria-pressed', 'false');
           } else {
             selectedPickedPlaces.set(idx, items[idx]);
             if (activeCard) {
               activeCard.classList.add('active');
             }
-            event.currentTarget.textContent = '☑';
+            event.currentTarget.textContent = '♥';
             event.currentTarget.setAttribute('aria-pressed', 'true');
           }
 
@@ -3634,6 +4277,12 @@
     closePhotoPicker();
 
     openPhotoPickerBtn.addEventListener('click', openPhotoPicker);
+    startParseModeBtn.addEventListener('click', () => {
+      setPhotoPickerMode('parse');
+    });
+    startGoogleModeBtn.addEventListener('click', () => {
+      setPhotoPickerMode('google');
+    });
     openTripManageBtn.addEventListener('click', openTripManageModal);
     closePhotoPickerBtn.addEventListener('click', closePhotoPicker);
     photoPickerBackdrop.addEventListener('click', closePhotoPicker);
@@ -3647,6 +4296,24 @@
       } catch (error) {
         statusText.textContent = error.message;
       }
+    });
+    saveScheduleCoordsBtn.addEventListener('click', async () => {
+      try {
+        await saveScheduleCoordinates();
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
+    openScheduleEditBtn.addEventListener('click', () => {
+      const next = !(schedulePlaceEditPanel && !schedulePlaceEditPanel.hidden);
+      setScheduleEditMode(next);
+    });
+    scheduleNotePlaceSummary.addEventListener('dblclick', (event) => {
+      const target = event.target.closest('[data-edit-target]');
+      if (!target) {
+        return;
+      }
+      focusScheduleEditField(target.getAttribute('data-edit-target'));
     });
     scheduleNoteMemo.addEventListener('input', () => {
       renderScheduleNotePreview(scheduleNoteMemo.value);
@@ -3688,6 +4355,9 @@
       } catch (error) {
         photoPickerStatus.textContent = error.message;
       }
+    });
+    resetManualPlaceBtn.addEventListener('click', () => {
+      resetManualPlaceFields();
     });
 
     tripForm.addEventListener('submit', async (event) => {

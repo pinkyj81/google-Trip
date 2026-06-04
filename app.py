@@ -43,12 +43,33 @@ FIELD_MASK = ','.join([
 DB_NOTE_MAX_LEN = 1000
 
 
+def _installed_sql_server_drivers() -> list[str]:
+    return [driver for driver in pyodbc.drivers() if 'SQL Server' in driver]
+
+
+def _resolve_db_driver() -> str:
+    installed = _installed_sql_server_drivers()
+    if DB_DRIVER and DB_DRIVER in installed:
+        return DB_DRIVER
+
+    for preferred in ('ODBC Driver 18 for SQL Server', 'ODBC Driver 17 for SQL Server', 'SQL Server'):
+        if preferred in installed:
+            return preferred
+
+    if DB_DRIVER:
+        return DB_DRIVER
+
+    raise RuntimeError('사용 가능한 SQL Server ODBC 드라이버가 없습니다.')
+
+
 def _get_mssql_conn() -> pyodbc.Connection:
     if not DB_USERNAME or not DB_PASSWORD:
         raise RuntimeError('DB_USERNAME, DB_PASSWORD를 .env에 설정하세요.')
 
+    driver_name = _resolve_db_driver()
+
     conn_str = (
-        f'DRIVER={{{DB_DRIVER}}};'
+        f'DRIVER={{{driver_name}}};'
         f'SERVER={DB_SERVER};'
         f'DATABASE={DB_DATABASE};'
         f'UID={DB_USERNAME};'
@@ -65,6 +86,56 @@ def _fit_db_text(value: str, max_len: int = DB_NOTE_MAX_LEN) -> str:
     if len(text) <= max_len:
         return text
     return text[:max_len]
+
+
+def _ensure_location_info_columns(conn: pyodbc.Connection) -> None:
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.LocationInfo', 'U') IS NOT NULL
+           AND COL_LENGTH('dbo.LocationInfo', 'GoogleMapsUrl') IS NULL
+        BEGIN
+            EXEC('ALTER TABLE dbo.LocationInfo ADD GoogleMapsUrl NVARCHAR(1000) NULL')
+        END
+        '''
+    )
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.LocationInfo', 'U') IS NOT NULL
+           AND COL_LENGTH('dbo.LocationInfo', 'Address') IS NULL
+        BEGIN
+            EXEC('ALTER TABLE dbo.LocationInfo ADD [Address] NVARCHAR(500) NULL')
+        END
+        '''
+    )
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.LocationInfo', 'U') IS NOT NULL
+           AND COL_LENGTH('dbo.LocationInfo', 'Latitude') IS NULL
+        BEGIN
+            EXEC('ALTER TABLE dbo.LocationInfo ADD Latitude FLOAT NULL')
+        END
+        '''
+    )
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.LocationInfo', 'U') IS NOT NULL
+           AND COL_LENGTH('dbo.LocationInfo', 'Longitude') IS NULL
+        BEGIN
+            EXEC('ALTER TABLE dbo.LocationInfo ADD Longitude FLOAT NULL')
+        END
+        '''
+    )
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.LocationInfo', 'U') IS NOT NULL
+           AND COL_LENGTH('dbo.LocationInfo', 'Category') IS NULL
+        BEGIN
+            EXEC('ALTER TABLE dbo.LocationInfo ADD Category NVARCHAR(100) NULL')
+        END
+        '''
+    )
+    conn.commit()
 
 
 def _extract_user_memo_text(note_text: str) -> str:
@@ -467,16 +538,19 @@ def _extract_coords_and_name_from_maps_url(url_text: str) -> tuple[float | None,
     lng = None
     name = ''
 
-    at_match = re.search(r'@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)', text)
-    if at_match:
-        lat = float(at_match.group(1))
-        lng = float(at_match.group(2))
+    # Prefer place-detail coordinates (!3d...!4d...) over map viewport center (@lat,lng).
+    # Some Google Maps URLs contain both, and @ points to current camera center, not the POI.
+    d_matches = re.findall(r'!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)', text)
+    if d_matches:
+        last_lat, last_lng = d_matches[-1]
+        lat = float(last_lat)
+        lng = float(last_lng)
 
     if lat is None or lng is None:
-        d_match = re.search(r'!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)', text)
-        if d_match:
-            lat = float(d_match.group(1))
-            lng = float(d_match.group(2))
+        at_match = re.search(r'@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)', text)
+        if at_match:
+            lat = float(at_match.group(1))
+            lng = float(at_match.group(2))
 
     parsed = urlparse(text)
     qs = parse_qs(parsed.query)
@@ -562,6 +636,52 @@ def _unwrap_google_redirect_url(url_text: str) -> str:
     return ''
 
 
+def _build_place_photo_proxy_url(photo_name: str, max_height: int = 360) -> str:
+    safe_height = max(120, min(int(max_height), 1600))
+    return f"/api/place-photo?photo_name={quote(photo_name)}&max_height={safe_height}"
+
+
+def _resolve_maps_photo_url(place_name: str, latitude: float | None, longitude: float | None) -> str:
+    text_query = str(place_name or '').strip()
+    if not text_query and (latitude is None or longitude is None):
+        return ''
+
+    payload = {
+        'textQuery': text_query or f'{latitude},{longitude}',
+        'pageSize': 5,
+        'languageCode': 'ko',
+        'rankPreference': 'RELEVANCE',
+    }
+    if latitude is not None and longitude is not None:
+        payload['locationBias'] = {
+            'circle': {
+                'center': {
+                    'latitude': latitude,
+                    'longitude': longitude,
+                },
+                'radius': 1500,
+            }
+        }
+
+    try:
+        body = _call_places_api(payload)
+        places = body.get('places', []) or []
+        for place in places:
+            photos = place.get('photos') or []
+            if not photos:
+                continue
+            first_photo = photos[0]
+            if not isinstance(first_photo, dict):
+                continue
+            photo_name = str(first_photo.get('name') or '').strip()
+            if photo_name and '/photos/' in photo_name:
+                return _build_place_photo_proxy_url(photo_name, 480)
+    except Exception:
+        return ''
+
+    return ''
+
+
 @app.route('/api/maps-resolve', methods=['POST'])
 def resolve_maps_url():
     data = request.get_json(silent=True) or {}
@@ -604,12 +724,14 @@ def resolve_maps_url():
             final_url = embedded_url
 
         lat, lng, name = _extract_coords_and_name_from_maps_url(final_url)
+        photo_url = _resolve_maps_photo_url(name, lat, lng)
         return jsonify({
             'input_url': maps_url,
             'final_url': final_url,
             'latitude': lat,
             'longitude': lng,
             'place_name': name,
+            'photo_url': photo_url,
         }), 200
     except Exception as exc:
         return jsonify({'error': f'링크 해석 실패: {exc}'}), 500
@@ -649,6 +771,239 @@ def _collect_places_paginated(base_payload: dict, max_rows: int, max_pages: int)
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/trip-info')
+def trip_info_page():
+    return render_template('trip_info.html')
+
+
+@app.route('/api/location-info/options', methods=['GET'])
+def location_info_options():
+    try:
+        with _get_mssql_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT
+                    LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                    LTRIM(RTRIM(ISNULL([City], ''))) AS city
+                FROM dbo.LocationInfo
+                WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
+                  AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
+                ORDER BY [Country], [City]
+                '''
+            )
+            rows = cursor.fetchall()
+
+        cities_by_country: dict[str, list[str]] = {}
+        for row in rows:
+            country = str(row.country or '').strip()
+            city = str(row.city or '').strip()
+            if not country or not city:
+                continue
+            cities = cities_by_country.setdefault(country, [])
+            if city not in cities:
+                cities.append(city)
+
+        countries = sorted(cities_by_country.keys(), key=lambda item: item.lower())
+        for key in list(cities_by_country.keys()):
+            cities_by_country[key] = sorted(cities_by_country[key], key=lambda item: item.lower())
+
+        return jsonify({'countries': countries, 'cities_by_country': cities_by_country})
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'콤보 옵션 조회 실패: {exc}'}), 500
+
+
+@app.route('/api/location-info/list', methods=['GET'])
+def location_info_list():
+    country = str(request.args.get('country') or '').strip()
+    city = str(request.args.get('city') or '').strip()
+
+    where_clauses = []
+    params: list[str] = []
+    if country:
+        where_clauses.append('LTRIM(RTRIM(ISNULL([Country], \'\'))) = ?')
+        params.append(country)
+    if city:
+        where_clauses.append('LTRIM(RTRIM(ISNULL([City], \'\'))) = ?')
+        params.append(city)
+
+    where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ''
+
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_info_columns(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                f'''
+                SELECT TOP (200)
+                    id,
+                    LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                    LTRIM(RTRIM(ISNULL([City], ''))) AS city,
+                    LTRIM(RTRIM(ISNULL([Attraction], ''))) AS attraction,
+                    ISNULL([Detail], '') AS detail,
+                    ISNULL([ImageUrl], '') AS image_url,
+                    ISNULL([GoogleMapsUrl], '') AS maps_url,
+                    ISNULL([Address], '') AS address,
+                    [Latitude] AS latitude,
+                    [Longitude] AS longitude,
+                    ISNULL([Category], '') AS category
+                FROM dbo.LocationInfo
+                {where_sql}
+                ORDER BY id DESC
+                ''',
+                tuple(params),
+            )
+            rows = cursor.fetchall()
+
+        items = []
+        for row in rows:
+            items.append(
+                {
+                    'id': int(row.id),
+                    'country': str(row.country or ''),
+                    'city': str(row.city or ''),
+                    'attraction': str(row.attraction or ''),
+                    'detail': str(row.detail or ''),
+                    'image_url': str(row.image_url or ''),
+                    'maps_url': str(row.maps_url or ''),
+                    'address': str(row.address or ''),
+                    'latitude': float(row.latitude) if row.latitude is not None else None,
+                    'longitude': float(row.longitude) if row.longitude is not None else None,
+                    'category': str(row.category or ''),
+                }
+            )
+
+        return jsonify({'items': items})
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'목록 조회 실패: {exc}'}), 500
+
+
+@app.route('/api/location-info', methods=['POST'])
+def create_location_info():
+    data = request.get_json(silent=True) or {}
+
+    country = str(data.get('country') or '').strip()
+    city = str(data.get('city') or '').strip()
+    attraction = str(data.get('attraction') or '').strip()
+    detail = str(data.get('detail') or '').strip()
+    image_url = str(data.get('image_url') or '').strip()
+    maps_url = str(data.get('maps_url') or '').strip()
+    address = str(data.get('address') or '').strip()
+    latitude = _parse_float(data.get('latitude'))
+    longitude = _parse_float(data.get('longitude'))
+    category = str(data.get('category') or '').strip()
+
+    if not country:
+        return jsonify({'error': '국가를 선택하세요.'}), 400
+    if not city:
+        return jsonify({'error': '도시를 선택하세요.'}), 400
+    if not attraction:
+        return jsonify({'error': 'Attraction을 입력하세요.'}), 400
+
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_info_columns(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO dbo.LocationInfo (
+                    [Country], [City], [Attraction], [Detail], [ImageUrl],
+                    [GoogleMapsUrl], [Address], [Latitude], [Longitude], [Category]
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    country,
+                    city,
+                    attraction,
+                    detail or None,
+                    image_url or None,
+                    maps_url or None,
+                    address or None,
+                    latitude,
+                    longitude,
+                    category or None,
+                ),
+            )
+
+            cursor.execute('SELECT CAST(SCOPE_IDENTITY() AS INT) AS inserted_id')
+            inserted = cursor.fetchone()
+            conn.commit()
+
+        return jsonify({'message': '저장되었습니다.', 'id': int(inserted.inserted_id) if inserted else None}), 201
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'저장 실패: {exc}'}), 500
+
+
+@app.route('/api/location-info/<int:item_id>', methods=['PUT'])
+def update_location_info(item_id: int):
+    data = request.get_json(silent=True) or {}
+
+    country = str(data.get('country') or '').strip()
+    city = str(data.get('city') or '').strip()
+    attraction = str(data.get('attraction') or '').strip()
+    detail = str(data.get('detail') or '').strip()
+    image_url = str(data.get('image_url') or '').strip()
+    maps_url = str(data.get('maps_url') or '').strip()
+    address = str(data.get('address') or '').strip()
+    latitude = _parse_float(data.get('latitude'))
+    longitude = _parse_float(data.get('longitude'))
+    category = str(data.get('category') or '').strip()
+
+    if item_id <= 0:
+        return jsonify({'error': '잘못된 ID입니다.'}), 400
+    if not country:
+        return jsonify({'error': '국가를 선택하세요.'}), 400
+    if not city:
+        return jsonify({'error': '도시를 선택하세요.'}), 400
+    if not attraction:
+        return jsonify({'error': 'Attraction을 입력하세요.'}), 400
+
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_info_columns(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                UPDATE dbo.LocationInfo
+                SET [Country] = ?,
+                    [City] = ?,
+                    [Attraction] = ?,
+                    [Detail] = ?,
+                    [ImageUrl] = ?,
+                    [GoogleMapsUrl] = ?,
+                    [Address] = ?,
+                    [Latitude] = ?,
+                    [Longitude] = ?,
+                    [Category] = ?
+                WHERE id = ?
+                ''',
+                (
+                    country,
+                    city,
+                    attraction,
+                    detail or None,
+                    image_url or None,
+                    maps_url or None,
+                    address or None,
+                    latitude,
+                    longitude,
+                    category or None,
+                    item_id,
+                ),
+            )
+
+            if cursor.rowcount == 0:
+                conn.rollback()
+                return jsonify({'error': '수정할 데이터를 찾지 못했습니다.'}), 404
+
+            conn.commit()
+
+        return jsonify({'message': '수정되었습니다.', 'id': item_id}), 200
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'수정 실패: {exc}'}), 500
 
 
 @app.route('/api/trips', methods=['GET'])
@@ -958,46 +1313,107 @@ def create_trip_place():
 def update_trip_place(place_id: int):
     data = request.get_json(silent=True) or {}
 
+    allowed_categories = {
+        'tourist_attraction',
+        'historical_landmark',
+        'restaurant',
+        'cafe',
+        'lodging',
+        'museum',
+        'park',
+        'point_of_interest',
+    }
+
     raw_lat = data.get('latitude')
     raw_lng = data.get('longitude')
+
+    has_lat_key = 'latitude' in data
+    has_lng_key = 'longitude' in data
+    if has_lat_key != has_lng_key:
+        return jsonify({'error': '위도와 경도는 함께 입력하거나 함께 비워야 합니다.'}), 400
 
     has_lat = raw_lat is not None and str(raw_lat).strip() != ''
     has_lng = raw_lng is not None and str(raw_lng).strip() != ''
 
-    if has_lat != has_lng:
+    if has_lat_key and has_lng_key and has_lat != has_lng:
         return jsonify({'error': '위도와 경도는 함께 입력하거나 함께 비워야 합니다.'}), 400
-
-    latitude = None
-    longitude = None
-    if has_lat and has_lng:
-        try:
-            latitude = float(raw_lat)
-            longitude = float(raw_lng)
-        except (TypeError, ValueError):
-            return jsonify({'error': '위도/경도는 숫자여야 합니다.'}), 400
-
-        if latitude < -90 or latitude > 90:
-            return jsonify({'error': '위도 범위는 -90~90 입니다.'}), 400
-        if longitude < -180 or longitude > 180:
-            return jsonify({'error': '경도 범위는 -180~180 입니다.'}), 400
 
     try:
         with _get_mssql_conn() as conn:
             _ensure_planner_tables(conn)
             cursor = conn.cursor()
 
-            cursor.execute('SELECT id FROM dbo.travel_trip_places WHERE id = ?', (place_id,))
-            if not cursor.fetchone():
+            cursor.execute(
+                '''
+                SELECT id, trip_id, place_name,
+                       COALESCE(NULLIF(LTRIM(RTRIM(place_category)), ''), 'point_of_interest') AS place_category,
+                       formatted_address,
+                       google_maps_uri,
+                       latitude,
+                       longitude,
+                       memo
+                FROM dbo.travel_trip_places
+                WHERE id = ?
+                ''',
+                (place_id,),
+            )
+            existing_row = cursor.fetchone()
+            existing = _row_to_dict(cursor, existing_row) if existing_row else None
+            if not existing:
                 return jsonify({'error': '수정할 장소가 존재하지 않습니다.'}), 404
+
+            place_name = str(existing.get('place_name') or '').strip()
+            if 'place_name' in data:
+                place_name = (data.get('place_name') or '').strip()
+            if not place_name:
+                return jsonify({'error': '장소 이름은 필수입니다.'}), 400
+
+            place_category = str(existing.get('place_category') or 'point_of_interest').strip().lower()
+            if 'place_category' in data:
+                place_category = (data.get('place_category') or '').strip().lower()
+            if place_category and place_category not in allowed_categories:
+                place_category = ''
+            if not place_category:
+                place_category = 'point_of_interest'
+
+            formatted_address = str(existing.get('formatted_address') or '').strip()
+            if 'formatted_address' in data:
+                formatted_address = (data.get('formatted_address') or '').strip()
+
+            google_maps_uri = str(existing.get('google_maps_uri') or '').strip()
+            if 'google_maps_uri' in data:
+                google_maps_uri = (data.get('google_maps_uri') or '').strip()
+
+            latitude = existing.get('latitude')
+            longitude = existing.get('longitude')
+            if has_lat_key and has_lng_key:
+                if has_lat and has_lng:
+                    try:
+                        latitude = float(raw_lat)
+                        longitude = float(raw_lng)
+                    except (TypeError, ValueError):
+                        return jsonify({'error': '위도/경도는 숫자여야 합니다.'}), 400
+
+                    if latitude < -90 or latitude > 90:
+                        return jsonify({'error': '위도 범위는 -90~90 입니다.'}), 400
+                    if longitude < -180 or longitude > 180:
+                        return jsonify({'error': '경도 범위는 -180~180 입니다.'}), 400
+                else:
+                    latitude = None
+                    longitude = None
 
             cursor.execute(
                 '''
                 UPDATE dbo.travel_trip_places
-                SET latitude = ?,
+                SET place_name = ?,
+                    place_category = ?,
+                    formatted_address = ?,
+                    google_maps_uri = ?,
+                    latitude = ?,
                     longitude = ?
                 WHERE id = ?
                 ''',
-                (latitude, longitude, place_id),
+                (place_name, place_category, formatted_address, google_maps_uri, latitude, longitude, place_id),
             )
 
             cursor.execute(
@@ -1020,10 +1436,10 @@ def update_trip_place(place_id: int):
             conn.commit()
 
         if not updated:
-            return jsonify({'error': '장소 좌표 수정 후 조회에 실패했습니다.'}), 500
+            return jsonify({'error': '장소 정보 수정 후 조회에 실패했습니다.'}), 500
         return jsonify({'place': updated}), 200
     except (RuntimeError, pyodbc.Error) as exc:
-        return jsonify({'error': f'장소 좌표 수정 실패: {exc}'}), 500
+        return jsonify({'error': f'장소 정보 수정 실패: {exc}'}), 500
 
 
 @app.route('/api/trip-places/<int:place_id>', methods=['DELETE'])
