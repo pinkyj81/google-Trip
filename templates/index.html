@@ -494,16 +494,19 @@
       border: 1px solid rgba(193, 102, 48, 0.35);
       background: #fff;
       color: #9a5224;
-      border-radius: 6px;
-      width: 16px;
-      height: 16px;
+      border-radius: 999px;
+      width: 18px;
+      height: 18px;
       padding: 0;
-      line-height: 1;
-      font-size: 11px;
+      line-height: 16px;
+      font-size: 13px;
       font-weight: 700;
       box-shadow: none;
       cursor: pointer;
       flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .schedule-delete-btn:hover {
       transform: none;
@@ -692,7 +695,13 @@
       justify-content: center;
     }
     .mini-btn.cancel {
-      background: #6c757d;
+      border-color: #d7dfea;
+      background: #eef3f9;
+      color: #56708e;
+    }
+    .mini-btn.cancel:hover {
+      background: #e5edf7;
+      transform: none;
     }
     .mini-btn.danger {
       border-color: #f4d4db;
@@ -1250,6 +1259,43 @@
     body.blue-theme .table-btn {
       background: linear-gradient(135deg, #3b84e0 0%, #2a6dc0 100%);
       box-shadow: 0 12px 24px rgba(42, 109, 192, 0.22);
+    }
+    body.blue-theme .mini-btn.cancel {
+      border-color: rgba(49, 109, 181, 0.28);
+      background: #eaf3ff;
+      color: #3f6792;
+      box-shadow: none;
+    }
+    body.blue-theme .mini-btn.cancel:hover {
+      background: #dfeeff;
+      transform: none;
+    }
+    body.blue-theme .schedule-delete-btn {
+      background: rgba(31, 78, 127, 0.08);
+      border-color: rgba(31, 78, 127, 0.24);
+      color: #2f5f8f;
+      box-shadow: none;
+      transform: none;
+    }
+    body.blue-theme .schedule-delete-btn:hover {
+      background: rgba(31, 78, 127, 0.16);
+      transform: none;
+    }
+    body.blue-theme .place-chip {
+      background: #e7f1fc;
+      color: #1f4e7f;
+      border-color: #9fc2e7;
+      box-shadow: none;
+    }
+    body.blue-theme .place-chip:hover {
+      background: #dbeafb;
+    }
+    body.blue-theme .place-chip-remove {
+      color: #1f5a95;
+      background: rgba(47, 120, 216, 0.16);
+    }
+    body.blue-theme .place-chip-remove:hover {
+      background: rgba(47, 120, 216, 0.28);
     }
     body.blue-theme .modal-backdrop {
       background: rgba(16, 44, 84, 0.4);

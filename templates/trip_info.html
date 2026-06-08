@@ -57,6 +57,13 @@
       display: grid;
       gap: 12px;
     }
+    .option-add-row {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
     .maps-row {
       margin-top: 12px;
       display: grid;
@@ -282,7 +289,8 @@
       }
       .maps-row,
       .coord-grid,
-      .top-field-grid {
+      .top-field-grid,
+      .option-add-row {
         grid-template-columns: 1fr;
       }
     }
@@ -308,6 +316,18 @@
               <option value="">도시를 선택하세요</option>
             </select>
           </div>
+        </div>
+
+        <div class="option-add-row">
+          <div>
+            <label for="tripInfoNewCountry">국가 추가</label>
+            <input id="tripInfoNewCountry" placeholder="예: 스페인" />
+          </div>
+          <div>
+            <label for="tripInfoNewCity">도시 추가</label>
+            <input id="tripInfoNewCity" placeholder="예: 바르셀로나" />
+          </div>
+          <button id="addCountryCityBtn" class="secondary" type="button">국가/도시 추가</button>
         </div>
 
         <div class="list-wrap">
@@ -426,6 +446,9 @@
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const listBodyEl = document.getElementById('tripInfoListBody');
     const listSummaryEl = document.getElementById('listSummary');
+    const newCountryInput = document.getElementById('tripInfoNewCountry');
+    const newCityInput = document.getElementById('tripInfoNewCity');
+    const addCountryCityBtn = document.getElementById('addCountryCityBtn');
 
     let cityOptions = {};
     let currentItems = [];
@@ -650,14 +673,60 @@
           imageUrlInput.value = String(payload.photo_url);
         }
         updateImagePreview();
-        setStatus(payload.photo_url
-          ? '링크 파싱 완료: 주소/위도/경도/이미지를 채웠습니다.'
-          : '링크 파싱 완료: 주소/위도/경도를 채웠습니다. (이미지는 미발견)');
+        const hasCoords = payload.latitude != null && payload.longitude != null;
+        if (!hasCoords) {
+          setStatus('링크 파싱 완료: 장소명은 찾았지만 위도/경도는 추출하지 못했습니다. 다른 공유 링크를 시도해 주세요.');
+        } else {
+          setStatus(payload.photo_url
+            ? '링크 파싱 완료: 주소/위도/경도/이미지를 채웠습니다.'
+            : '링크 파싱 완료: 주소/위도/경도를 채웠습니다. (이미지는 미발견)');
+        }
       } catch (error) {
         console.error(error);
         setStatus(`링크 파싱 실패: ${error.message}`);
       } finally {
         parseMapsBtn.disabled = false;
+      }
+    }
+
+    async function addCountryCityOption() {
+      const country = newCountryInput.value.trim();
+      const city = newCityInput.value.trim();
+      if (!country || !city) {
+        setStatus('국가와 도시를 모두 입력한 뒤 추가하세요.');
+        return;
+      }
+
+      addCountryCityBtn.disabled = true;
+      setStatus('국가/도시 옵션 추가 중...');
+
+      try {
+        const res = await fetch('/api/location-info/options', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ country, city }),
+        });
+        const payload = await res.json();
+        if (!res.ok) {
+          throw new Error(payload.error || '옵션 추가 실패');
+        }
+
+        await loadComboOptions();
+        ensureOption(countrySelect, country);
+        countrySelect.value = country;
+        updateCityOptions();
+        ensureOption(citySelect, city);
+        citySelect.value = city;
+        await loadRegisteredList();
+
+        newCountryInput.value = '';
+        newCityInput.value = '';
+        setStatus(`국가/도시 옵션 추가 완료: ${country} / ${city}`);
+      } catch (error) {
+        console.error(error);
+        setStatus(`국가/도시 옵션 추가 실패: ${error.message}`);
+      } finally {
+        addCountryCityBtn.disabled = false;
       }
     }
 
@@ -772,6 +841,7 @@
     countrySelect.addEventListener('change', updateCityOptions);
     citySelect.addEventListener('change', loadRegisteredList);
     parseMapsBtn.addEventListener('click', parseGoogleMapsLink);
+    addCountryCityBtn.addEventListener('click', addCountryCityOption);
     refreshListBtn.addEventListener('click', loadRegisteredList);
     cancelEditBtn.addEventListener('click', () => clearEditMode(true));
     imageUrlInput.addEventListener('input', updateImagePreview);

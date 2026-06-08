@@ -138,6 +138,38 @@ def _ensure_location_info_columns(conn: pyodbc.Connection) -> None:
     conn.commit()
 
 
+def _ensure_location_option_table(conn: pyodbc.Connection) -> None:
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.location_info_options', 'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.location_info_options (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                Country NVARCHAR(100) NOT NULL,
+                City NVARCHAR(100) NOT NULL,
+                created_at DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+            )
+        END
+        '''
+    )
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.location_info_options', 'U') IS NOT NULL
+           AND NOT EXISTS (
+               SELECT 1
+               FROM sys.indexes
+               WHERE name = 'UX_location_info_options_country_city'
+                 AND object_id = OBJECT_ID('dbo.location_info_options')
+           )
+        BEGIN
+            EXEC('CREATE UNIQUE INDEX UX_location_info_options_country_city ON dbo.location_info_options(Country, City)')
+        END
+        '''
+    )
+    conn.commit()
+
+
 def _extract_user_memo_text(note_text: str) -> str:
     text = str(note_text or '').strip()
     if not text:
@@ -383,6 +415,15 @@ def _parse_float(value: str | None) -> float | None:
         return None
 
 
+def _safe_int(value) -> int | None:
+    if value in (None, ''):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_payload(data: dict) -> dict:
     auto_recommend = bool(data.get('auto_recommend'))
     query = (data.get('query') or '').strip()
@@ -534,27 +575,41 @@ def _extract_coords_and_name_from_maps_url(url_text: str) -> tuple[float | None,
     if not text:
         return None, None, ''
 
+    decoded_text = text
+    for _ in range(4):
+        next_value = unquote(decoded_text)
+        if next_value == decoded_text:
+            break
+        decoded_text = next_value
+
     lat = None
     lng = None
     name = ''
 
     # Prefer place-detail coordinates (!3d...!4d...) over map viewport center (@lat,lng).
     # Some Google Maps URLs contain both, and @ points to current camera center, not the POI.
-    d_matches = re.findall(r'!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)', text)
+    d_matches = re.findall(r'!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)', decoded_text)
     if d_matches:
         last_lat, last_lng = d_matches[-1]
         lat = float(last_lat)
         lng = float(last_lng)
 
     if lat is None or lng is None:
-        at_match = re.search(r'@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)', text)
+        at_match = re.search(r'@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)', decoded_text)
         if at_match:
             lat = float(at_match.group(1))
             lng = float(at_match.group(2))
 
-    parsed = urlparse(text)
+    # Some share links use /{lat},{lng},17z style without '@'.
+    if lat is None or lng is None:
+        path_match = re.search(r'/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,|/)', decoded_text)
+        if path_match:
+            lat = float(path_match.group(1))
+            lng = float(path_match.group(2))
+
+    parsed = urlparse(decoded_text)
     qs = parse_qs(parsed.query)
-    for key in ('q', 'query', 'll', 'destination'):
+    for key in ('q', 'query', 'll', 'destination', 'center', 'sll', 'daddr', 'origin'):
         if lat is not None and lng is not None:
             break
         raw = (qs.get(key) or [''])[0]
@@ -562,6 +617,16 @@ def _extract_coords_and_name_from_maps_url(url_text: str) -> tuple[float | None,
         if m:
             lat = float(m.group(1))
             lng = float(m.group(2))
+
+    # Last-resort scan over the whole URL text for a valid coordinate pair.
+    if lat is None or lng is None:
+        for m in re.finditer(r'(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)', decoded_text):
+            cand_lat = float(m.group(1))
+            cand_lng = float(m.group(2))
+            if -90 <= cand_lat <= 90 and -180 <= cand_lng <= 180:
+                lat = cand_lat
+                lng = cand_lng
+                break
 
     def _decode_percent_text(raw_text: str) -> str:
         value = str(raw_text or '').strip()
@@ -620,6 +685,94 @@ def _extract_embedded_maps_url(html_text: str) -> str:
     return ''
 
 
+def _is_static_map_url(url_text: str) -> bool:
+    value = str(url_text or '').lower()
+    return '/maps/api/staticmap' in value or 'staticmap' in value
+
+
+def _extract_meta_image_url(html_text: str) -> str:
+    text = str(html_text or '')
+    if not text:
+        return ''
+
+    patterns = [
+        r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+name=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, text, flags=re.IGNORECASE)
+        if m:
+            return m.group(1).strip().replace('&amp;', '&')
+    return ''
+
+
+def _extract_googleusercontent_image_url(html_text: str) -> str:
+    text = str(html_text or '')
+    if not text:
+        return ''
+
+    normalized = text.replace('\\u0026', '&').replace('\\/', '/')
+    patterns = [
+        r'https?://lh\d+\.googleusercontent\.com/[^"\'\s<>]+',
+        r'https?://lh\d+\.ggpht\.com/[^"\'\s<>]+',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, normalized, flags=re.IGNORECASE)
+        if m:
+            return m.group(0).replace('&amp;', '&')
+    return ''
+
+
+def _build_external_image_proxy_url(image_url: str) -> str:
+    return f"/api/external-image?url={quote(str(image_url or '').strip(), safe='')}"
+
+
+def _build_static_map_fallback_urls(latitude: float | None, longitude: float | None) -> list[str]:
+    if latitude is None or longitude is None:
+        return []
+
+    return [
+        (
+            'https://staticmap.openstreetmap.de/staticmap.php'
+            f'?center={latitude},{longitude}'
+            '&zoom=15&size=800x420&maptype=mapnik'
+            f'&markers={latitude},{longitude},red-pushpin'
+        ),
+        (
+            'https://static-maps.yandex.ru/1.x/'
+            f'?ll={longitude},{latitude}'
+            '&size=650,420&z=15&l=map'
+            f'&pt={longitude},{latitude},pm2rdm'
+        ),
+    ]
+
+
+def _is_image_response(resp: requests.Response) -> bool:
+    content_type = (resp.headers.get('Content-Type') or '').lower()
+    return bool(content_type.startswith('image/'))
+
+
+def _pick_reachable_image_url(candidates: list[str]) -> str:
+    for candidate in candidates:
+        url = str(candidate or '').strip()
+        if not url:
+            continue
+        try:
+            response = requests.get(
+                url,
+                allow_redirects=True,
+                timeout=8,
+                headers={'User-Agent': 'Mozilla/5.0'},
+                stream=True,
+            )
+            if response.status_code < 400 and _is_image_response(response):
+                return url
+        except requests.RequestException:
+            continue
+    return ''
+
+
 def _unwrap_google_redirect_url(url_text: str) -> str:
     text = str(url_text or '').strip()
     if not text:
@@ -636,6 +789,36 @@ def _unwrap_google_redirect_url(url_text: str) -> str:
     return ''
 
 
+def _extract_first_http_url(text: str) -> str:
+    raw = str(text or '').strip()
+    if not raw:
+        return ''
+
+    # Markdown link format: [title](https://...)
+    md = re.search(r'\((https?://[^)\s]+)\)', raw)
+    if md:
+        return md.group(1).strip()
+
+    # Plain URL inside arbitrary text
+    direct = re.search(r'(https?://[^\s]+)', raw)
+    if direct:
+        return direct.group(1).strip()
+
+    return raw
+
+
+def _is_allowed_google_maps_host(host: str) -> bool:
+    value = str(host or '').lower().strip()
+    if not value:
+        return False
+
+    if value in ('goo.gl', 'g.page', 'maps.app.goo.gl'):
+        return True
+
+    # Accept Google domains like google.com, google.co.kr, maps.google.de, etc.
+    return 'google.' in value
+
+
 def _build_place_photo_proxy_url(photo_name: str, max_height: int = 360) -> str:
     safe_height = max(120, min(int(max_height), 1600))
     return f"/api/place-photo?photo_name={quote(photo_name)}&max_height={safe_height}"
@@ -646,46 +829,81 @@ def _resolve_maps_photo_url(place_name: str, latitude: float | None, longitude: 
     if not text_query and (latitude is None or longitude is None):
         return ''
 
+    query_candidates = []
+    if text_query:
+        query_candidates.append(text_query)
+        normalized = re.sub(r'\s*\([^)]*\)', '', text_query).strip()
+        if normalized and normalized != text_query:
+            query_candidates.append(normalized)
+    if latitude is not None and longitude is not None:
+        query_candidates.append(f'{latitude},{longitude}')
+
+    for query in query_candidates:
+        payload = {
+            'textQuery': query,
+            'pageSize': 5,
+            'languageCode': 'ko',
+            'rankPreference': 'RELEVANCE',
+        }
+        if latitude is not None and longitude is not None:
+            payload['locationBias'] = {
+                'circle': {
+                    'center': {
+                        'latitude': latitude,
+                        'longitude': longitude,
+                    },
+                    'radius': 1500,
+                }
+            }
+
+        try:
+            body = _call_places_api(payload)
+            places = body.get('places', []) or []
+            for place in places:
+                photos = place.get('photos') or []
+                if not photos:
+                    continue
+                first_photo = photos[0]
+                if not isinstance(first_photo, dict):
+                    continue
+                photo_name = str(first_photo.get('name') or '').strip()
+                if photo_name and '/photos/' in photo_name:
+                    return _build_place_photo_proxy_url(photo_name, 480)
+        except Exception:
+            continue
+
+    return ''
+
+
+def _resolve_coords_from_place_name(place_name: str) -> tuple[float | None, float | None]:
+    query = str(place_name or '').strip()
+    if not query:
+        return None, None
+
     payload = {
-        'textQuery': text_query or f'{latitude},{longitude}',
-        'pageSize': 5,
+        'textQuery': query,
+        'pageSize': 1,
         'languageCode': 'ko',
         'rankPreference': 'RELEVANCE',
     }
-    if latitude is not None and longitude is not None:
-        payload['locationBias'] = {
-            'circle': {
-                'center': {
-                    'latitude': latitude,
-                    'longitude': longitude,
-                },
-                'radius': 1500,
-            }
-        }
-
     try:
         body = _call_places_api(payload)
         places = body.get('places', []) or []
-        for place in places:
-            photos = place.get('photos') or []
-            if not photos:
-                continue
-            first_photo = photos[0]
-            if not isinstance(first_photo, dict):
-                continue
-            photo_name = str(first_photo.get('name') or '').strip()
-            if photo_name and '/photos/' in photo_name:
-                return _build_place_photo_proxy_url(photo_name, 480)
-    except Exception:
-        return ''
+        if not places:
+            return None, None
 
-    return ''
+        loc = (places[0] or {}).get('location') or {}
+        lat = _parse_float(loc.get('latitude'))
+        lng = _parse_float(loc.get('longitude'))
+        return lat, lng
+    except Exception:
+        return None, None
 
 
 @app.route('/api/maps-resolve', methods=['POST'])
 def resolve_maps_url():
     data = request.get_json(silent=True) or {}
-    maps_url = (data.get('maps_url') or '').strip()
+    maps_url = _extract_first_http_url(data.get('maps_url') or '')
     if not maps_url:
         return jsonify({'error': 'maps_url이 필요합니다.'}), 400
 
@@ -695,8 +913,7 @@ def resolve_maps_url():
         if not host:
             return jsonify({'error': '유효한 URL 형식이 아닙니다.'}), 400
 
-        allowed = ('google.com', 'goo.gl', 'g.page')
-        if not any(host == d or host.endswith(f'.{d}') for d in allowed):
+        if not _is_allowed_google_maps_host(host):
             return jsonify({'error': 'Google Maps 링크만 지원합니다.'}), 400
 
         final_url = maps_url
@@ -720,11 +937,27 @@ def resolve_maps_url():
             final_url = unwrapped
 
         embedded_url = _extract_embedded_maps_url(response_text)
-        if embedded_url:
+        if embedded_url and not _is_static_map_url(embedded_url):
             final_url = embedded_url
 
         lat, lng, name = _extract_coords_and_name_from_maps_url(final_url)
+        if (lat is None or lng is None) and name:
+            fallback_lat, fallback_lng = _resolve_coords_from_place_name(name)
+            lat = lat if lat is not None else fallback_lat
+            lng = lng if lng is not None else fallback_lng
         photo_url = _resolve_maps_photo_url(name, lat, lng)
+        if not photo_url:
+            photo_url = _extract_googleusercontent_image_url(response_text)
+        if not photo_url:
+            photo_url = _extract_meta_image_url(response_text)
+        if not photo_url:
+            static_candidates = _build_static_map_fallback_urls(lat, lng)
+            photo_url = _pick_reachable_image_url(static_candidates)
+            if not photo_url and static_candidates:
+                photo_url = static_candidates[0]
+
+        if photo_url.startswith('http://') or photo_url.startswith('https://'):
+            photo_url = _build_external_image_proxy_url(photo_url)
         return jsonify({
             'input_url': maps_url,
             'final_url': final_url,
@@ -732,6 +965,7 @@ def resolve_maps_url():
             'longitude': lng,
             'place_name': name,
             'photo_url': photo_url,
+            'coord_found': bool(lat is not None and lng is not None),
         }), 200
     except Exception as exc:
         return jsonify({'error': f'링크 해석 실패: {exc}'}), 500
@@ -782,16 +1016,29 @@ def trip_info_page():
 def location_info_options():
     try:
         with _get_mssql_conn() as conn:
+            _ensure_location_option_table(conn)
             cursor = conn.cursor()
             cursor.execute(
                 '''
-                SELECT
-                    LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
-                    LTRIM(RTRIM(ISNULL([City], ''))) AS city
-                FROM dbo.LocationInfo
-                WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
-                  AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
-                ORDER BY [Country], [City]
+                SELECT country, city
+                FROM (
+                    SELECT
+                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
+                    FROM dbo.LocationInfo
+                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
+                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
+
+                    UNION
+
+                    SELECT
+                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
+                    FROM dbo.location_info_options
+                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
+                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
+                ) X
+                ORDER BY country, city
                 '''
             )
             rows = cursor.fetchall()
@@ -813,6 +1060,43 @@ def location_info_options():
         return jsonify({'countries': countries, 'cities_by_country': cities_by_country})
     except (RuntimeError, pyodbc.Error) as exc:
         return jsonify({'error': f'콤보 옵션 조회 실패: {exc}'}), 500
+
+
+@app.route('/api/location-info/options', methods=['POST'])
+def create_location_info_option():
+    data = request.get_json(silent=True) or {}
+    country = str(data.get('country') or '').strip()
+    city = str(data.get('city') or '').strip()
+
+    if not country:
+        return jsonify({'error': '추가할 국가를 입력하세요.'}), 400
+    if not city:
+        return jsonify({'error': '추가할 도시를 입력하세요.'}), 400
+
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_option_table(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM dbo.location_info_options
+                    WHERE LTRIM(RTRIM(Country)) = ?
+                      AND LTRIM(RTRIM(City)) = ?
+                )
+                BEGIN
+                    INSERT INTO dbo.location_info_options (Country, City)
+                    VALUES (?, ?)
+                END
+                ''',
+                (country, city, country, city),
+            )
+            conn.commit()
+
+        return jsonify({'message': '국가/도시 옵션이 추가되었습니다.', 'country': country, 'city': city}), 201
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'옵션 추가 실패: {exc}'}), 500
 
 
 @app.route('/api/location-info/list', methods=['GET'])
@@ -861,7 +1145,7 @@ def location_info_list():
         for row in rows:
             items.append(
                 {
-                    'id': int(row.id),
+                    'id': _safe_int(row.id),
                     'country': str(row.country or ''),
                     'city': str(row.city or ''),
                     'attraction': str(row.attraction or ''),
@@ -906,6 +1190,42 @@ def create_location_info():
         with _get_mssql_conn() as conn:
             _ensure_location_info_columns(conn)
             cursor = conn.cursor()
+
+            cursor.execute(
+                '''
+                SELECT TOP (1) id
+                FROM dbo.LocationInfo
+                WHERE LTRIM(RTRIM(ISNULL([Country], ''))) = ?
+                  AND LTRIM(RTRIM(ISNULL([City], ''))) = ?
+                  AND LTRIM(RTRIM(ISNULL([Attraction], ''))) = ?
+                  AND LTRIM(RTRIM(ISNULL([Detail], ''))) = ?
+                  AND LTRIM(RTRIM(ISNULL([ImageUrl], ''))) = ?
+                  AND LTRIM(RTRIM(ISNULL([GoogleMapsUrl], ''))) = ?
+                  AND LTRIM(RTRIM(ISNULL([Address], ''))) = ?
+                  AND LTRIM(RTRIM(ISNULL([Category], ''))) = ?
+                  AND (([Latitude] IS NULL AND ? IS NULL) OR [Latitude] = ?)
+                  AND (([Longitude] IS NULL AND ? IS NULL) OR [Longitude] = ?)
+                ORDER BY id DESC
+                ''',
+                (
+                    country,
+                    city,
+                    attraction,
+                    detail,
+                    image_url,
+                    maps_url,
+                    address,
+                    category,
+                    latitude,
+                    latitude,
+                    longitude,
+                    longitude,
+                ),
+            )
+            existing = cursor.fetchone()
+            if existing:
+                return jsonify({'message': '동일 데이터가 이미 존재합니다.', 'id': _safe_int(existing[0]), 'duplicate': True}), 200
+
             cursor.execute(
                 '''
                 INSERT INTO dbo.LocationInfo (
@@ -932,7 +1252,8 @@ def create_location_info():
             inserted = cursor.fetchone()
             conn.commit()
 
-        return jsonify({'message': '저장되었습니다.', 'id': int(inserted.inserted_id) if inserted else None}), 201
+        inserted_id = _safe_int(inserted.inserted_id if inserted else None)
+        return jsonify({'message': '저장되었습니다.', 'id': inserted_id}), 201
     except (RuntimeError, pyodbc.Error) as exc:
         return jsonify({'error': f'저장 실패: {exc}'}), 500
 
@@ -2054,6 +2375,36 @@ def place_photo():
         return jsonify({'error': f'사진 API 오류: {message or response.status_code}'}), response.status_code
 
     content_type = response.headers.get('Content-Type', 'image/jpeg')
+    return Response(response.content, mimetype=content_type)
+
+
+@app.route('/api/external-image')
+def external_image_proxy():
+    source_url = (request.args.get('url') or '').strip()
+    if not source_url:
+        return jsonify({'error': 'url 파라미터가 필요합니다.'}), 400
+
+    parsed = urlparse(source_url)
+    if parsed.scheme not in ('http', 'https'):
+        return jsonify({'error': 'http/https URL만 지원합니다.'}), 400
+
+    try:
+        response = requests.get(
+            source_url,
+            allow_redirects=True,
+            timeout=15,
+            headers={'User-Agent': 'Mozilla/5.0'},
+        )
+    except requests.RequestException as exc:
+        return jsonify({'error': f'외부 이미지 조회 실패: {exc}'}), 502
+
+    if response.status_code >= 400:
+        return jsonify({'error': f'외부 이미지 응답 오류: {response.status_code}'}), response.status_code
+
+    content_type = response.headers.get('Content-Type', 'application/octet-stream')
+    if not content_type.lower().startswith('image/'):
+        return jsonify({'error': '이미지 응답이 아닙니다.'}), 415
+
     return Response(response.content, mimetype=content_type)
 
 
