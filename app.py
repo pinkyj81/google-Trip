@@ -1012,6 +1012,11 @@ def trip_info_page():
     return render_template('trip_info.html')
 
 
+@app.route('/trip-feed')
+def trip_feed_page():
+    return render_template('trip_feed.html')
+
+
 @app.route('/api/location-info/options', methods=['GET'])
 def location_info_options():
     try:

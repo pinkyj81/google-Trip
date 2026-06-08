@@ -46,6 +46,26 @@
       margin-top: 6px;
       font-size: 14px;
     }
+    .page-link-row {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .page-link {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1f5fb5;
+      background: #e9f2ff;
+      border: 1px solid #bcd8f5;
+    }
+    .page-link:hover {
+      background: #dfeeff;
+    }
     .combo-grid {
       margin-top: 20px;
       display: grid;
@@ -81,6 +101,74 @@
       grid-template-columns: 220px minmax(0, 1fr);
       gap: 12px;
       align-items: end;
+    }
+    .attraction-actions {
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .attraction-input-wrap {
+      flex: 1;
+      max-width: 520px;
+    }
+    .mini-btn {
+      border-radius: 10px;
+      padding: 8px 11px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .google-result-wrap {
+      border: 1px solid #cfe1f4;
+      border-radius: 12px;
+      background: #fafdff;
+      overflow: hidden;
+    }
+    .google-result-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #edf5ff;
+      border-bottom: 1px solid #cfe1f4;
+      color: #205689;
+      font-weight: 700;
+    }
+    .google-result-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e3eefb;
+      background: #f7fbff;
+    }
+    .google-result-body {
+      max-height: 220px;
+      overflow: auto;
+    }
+    .google-col-check {
+      width: 78px;
+    }
+    .google-col-name {
+      width: 210px;
+    }
+    .google-col-type {
+      width: 150px;
+    }
+    .google-col-map {
+      width: 90px;
+    }
+    .select-cell {
+      text-align: center;
+    }
+    .map-link {
+      color: #1f5fb5;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .map-link:hover {
+      text-decoration: underline;
     }
     label {
       display: block;
@@ -301,6 +389,9 @@
     <section class="card">
       <h1>여행 정보</h1>
       <p class="desc">LocationInfo 테이블에 데이터를 저장합니다.</p>
+      <div class="page-link-row">
+        <a class="page-link" href="/trip-feed">인스타 피드 보기</a>
+      </div>
 
       <form id="locationInfoForm">
         <div class="combo-grid">
@@ -383,7 +474,39 @@
             </div>
             <div>
               <label for="tripInfoAttraction">관광지명 (Attraction)</label>
-              <input id="tripInfoAttraction" required placeholder="예: 콜로세움" />
+              <div class="attraction-actions">
+                <div class="attraction-input-wrap">
+                  <input id="tripInfoAttraction" required placeholder="예: 콜로세움" />
+                </div>
+                <button id="fillFromGoogleBtn" class="secondary mini-btn" type="button">Google 검색</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="google-result-wrap">
+            <div class="google-result-head">
+              <span>Google 검색 결과</span>
+              <span id="googleResultSummary">0건</span>
+            </div>
+            <div class="google-result-actions">
+              <button id="selectAllGoogleBtn" class="secondary mini-btn" type="button">전체 선택</button>
+              <button id="clearGoogleSelectionBtn" class="secondary mini-btn" type="button">선택 해제</button>
+            </div>
+            <div class="google-result-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="google-col-check">선택</th>
+                    <th class="google-col-name">장소명</th>
+                    <th>주소</th>
+                    <th class="google-col-type">타입</th>
+                    <th class="google-col-map">지도</th>
+                  </tr>
+                </thead>
+                <tbody id="googleResultBody">
+                  <tr><td class="empty-row" colspan="5">관광지명을 입력하고 Google 검색을 눌러주세요.</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -442,6 +565,11 @@
     const imagePreviewEl = document.getElementById('tripInfoImagePreview');
     const statusEl = document.getElementById('tripInfoStatus');
     const saveBtn = document.getElementById('saveLocationInfoBtn');
+    const fillFromGoogleBtn = document.getElementById('fillFromGoogleBtn');
+    const selectAllGoogleBtn = document.getElementById('selectAllGoogleBtn');
+    const clearGoogleSelectionBtn = document.getElementById('clearGoogleSelectionBtn');
+    const googleResultBodyEl = document.getElementById('googleResultBody');
+    const googleResultSummaryEl = document.getElementById('googleResultSummary');
     const refreshListBtn = document.getElementById('refreshListBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const listBodyEl = document.getElementById('tripInfoListBody');
@@ -453,6 +581,8 @@
     let cityOptions = {};
     let currentItems = [];
     let editingId = null;
+    let googleCandidates = [];
+    const selectedGoogleIndexes = new Set();
 
     function setStatus(text) {
       statusEl.textContent = text;
@@ -479,6 +609,106 @@
       updateImagePreview();
     }
 
+    function setGoogleActionButtonsDisabled(disabled) {
+      fillFromGoogleBtn.disabled = disabled;
+      selectAllGoogleBtn.disabled = disabled;
+      clearGoogleSelectionBtn.disabled = disabled;
+    }
+
+    function renderGoogleResults() {
+      if (!Array.isArray(googleCandidates) || googleCandidates.length === 0) {
+        googleResultBodyEl.innerHTML = '<tr><td class="empty-row" colspan="5">검색 결과가 없습니다.</td></tr>';
+        googleResultSummaryEl.textContent = '0건';
+        return;
+      }
+
+      const rows = googleCandidates.map((place, index) => {
+        const isChecked = selectedGoogleIndexes.has(index) ? 'checked' : '';
+        const name = escapeHtml(place.displayName || '이름 없음');
+        const address = escapeHtml(place.formattedAddress || '-');
+        const type = escapeHtml(Array.isArray(place.types) ? (place.types[0] || '-') : '-');
+        const mapLink = place.googleMapsUri
+          ? `<a class="map-link" href="${escapeHtml(place.googleMapsUri)}" target="_blank" rel="noopener">열기</a>`
+          : '-';
+
+        return `
+          <tr>
+            <td class="select-cell"><input type="checkbox" data-google-index="${index}" ${isChecked} /></td>
+            <td>${name}</td>
+            <td>${address}</td>
+            <td>${type}</td>
+            <td>${mapLink}</td>
+          </tr>
+        `;
+      });
+
+      googleResultBodyEl.innerHTML = rows.join('');
+      googleResultSummaryEl.textContent = `${googleCandidates.length}건`;
+    }
+
+    function getSelectedGoogleCandidates() {
+      return Array.from(selectedGoogleIndexes)
+        .map((idx) => googleCandidates[idx])
+        .filter(Boolean);
+    }
+
+    function applyGoogleCandidateToForm(place) {
+      if (!place || typeof place !== 'object') {
+        return;
+      }
+
+      if (place.displayName) {
+        attractionInput.value = String(place.displayName).trim();
+      }
+      if (place.googleMapsUri) {
+        mapsUrlInput.value = String(place.googleMapsUri);
+      }
+      if (place.formattedAddress) {
+        addressInput.value = String(place.formattedAddress);
+      }
+      latitudeInput.value = place.latitude == null ? '' : String(place.latitude);
+      longitudeInput.value = place.longitude == null ? '' : String(place.longitude);
+      if (place.photoUrl) {
+        imageUrlInput.value = String(place.photoUrl);
+      }
+
+      if (!categoryInput.value) {
+        const inferred = inferCategoryFromTypes(place.types || []);
+        if (inferred) {
+          categoryInput.value = inferred;
+        }
+      }
+
+      updateImagePreview();
+    }
+
+    function handleGoogleResultCheck(event) {
+      const inputEl = event.target.closest('input[data-google-index]');
+      if (!inputEl) {
+        return;
+      }
+
+      const idx = Number(inputEl.dataset.googleIndex);
+      if (!Number.isFinite(idx)) {
+        return;
+      }
+
+      if (inputEl.checked) {
+        selectedGoogleIndexes.add(idx);
+        applyGoogleCandidateToForm(googleCandidates[idx]);
+        setStatus(`선택 변경: ${googleCandidates[idx]?.displayName || '장소'} 정보로 폼을 갱신했습니다.`);
+      } else {
+        selectedGoogleIndexes.delete(idx);
+        const remains = getSelectedGoogleCandidates();
+        if (remains.length > 0) {
+          applyGoogleCandidateToForm(remains[0]);
+          setStatus(`선택 변경: ${remains[0]?.displayName || '장소'} 정보로 폼을 갱신했습니다.`);
+        } else {
+          setStatus('선택된 Google 결과가 없습니다. 다른 항목을 선택해 주세요.');
+        }
+      }
+    }
+
     function updateImagePreview() {
       const src = imageUrlInput.value.trim();
       if (!src) {
@@ -494,6 +724,30 @@
         imagePreviewEl.textContent = `이미지 로드 실패: ${src}`;
       });
       imagePreviewEl.appendChild(img);
+    }
+
+    function inferCategoryFromTypes(types) {
+      if (!Array.isArray(types)) {
+        return '';
+      }
+
+      const lowered = types.map((value) => String(value || '').toLowerCase());
+      if (lowered.some((t) => t.includes('restaurant') || t.includes('food'))) {
+        return '맛집';
+      }
+      if (lowered.some((t) => t.includes('cafe') || t.includes('coffee'))) {
+        return '카페';
+      }
+      if (lowered.some((t) => t.includes('lodging') || t.includes('hotel') || t.includes('accommodation'))) {
+        return '숙소';
+      }
+      if (lowered.some((t) => t.includes('shopping') || t.includes('store') || t.includes('mall'))) {
+        return '쇼핑';
+      }
+      if (lowered.some((t) => t.includes('museum') || t.includes('tourist') || t.includes('landmark') || t.includes('park'))) {
+        return '관광지';
+      }
+      return '';
     }
 
     function clearEditMode(resetForm = false) {
@@ -619,6 +873,14 @@
         params.set('city', citySelect.value);
       }
 
+      if (!countrySelect.value || !citySelect.value) {
+        listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="10">국가와 도시를 선택하면 등록 리스트를 보여드립니다.</td></tr>';
+        listSummaryEl.textContent = '0건';
+        currentItems = [];
+        clearEditMode(false);
+        return;
+      }
+
       const url = `/api/location-info/list?${params.toString()}`;
       listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="10">등록 리스트를 불러오는 중...</td></tr>';
 
@@ -686,6 +948,73 @@
         setStatus(`링크 파싱 실패: ${error.message}`);
       } finally {
         parseMapsBtn.disabled = false;
+      }
+    }
+
+    async function autofillByGooglePlaces() {
+      const attraction = attractionInput.value.trim();
+      const city = citySelect.value.trim();
+      const country = countrySelect.value.trim();
+
+      if (!attraction) {
+        setStatus('관광지명을 먼저 입력한 뒤 Google 자동 채우기를 눌러주세요.');
+        attractionInput.focus();
+        return;
+      }
+
+      const query = [attraction, city, country].filter(Boolean).join(' ');
+      if (!query) {
+        setStatus('검색어를 만들 수 없습니다. 국가/도시/관광지명을 확인하세요.');
+        return;
+      }
+
+      setGoogleActionButtonsDisabled(true);
+      googleResultBodyEl.innerHTML = '<tr><td class="empty-row" colspan="5">Google 검색 중...</td></tr>';
+      setStatus('Google Places에서 장소 정보를 조회 중...');
+
+      try {
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            search_type: 'text',
+            max_rows: 10,
+          }),
+        });
+
+        const payload = await res.json();
+        if (!res.ok) {
+          throw new Error(payload.error || 'Google 검색 실패');
+        }
+
+        const places = Array.isArray(payload.places) ? payload.places : [];
+        if (places.length === 0) {
+          googleCandidates = [];
+          selectedGoogleIndexes.clear();
+          renderGoogleResults();
+          setStatus('Google Places 검색 결과가 없습니다. 관광지명을 조금 더 구체적으로 입력해 주세요.');
+          return;
+        }
+
+        googleCandidates = places;
+        selectedGoogleIndexes.clear();
+
+        const loweredAttraction = attraction.toLowerCase();
+        const pickedIndex = places.findIndex((place) => String(place.displayName || '').toLowerCase().includes(loweredAttraction));
+        selectedGoogleIndexes.add(pickedIndex >= 0 ? pickedIndex : 0);
+
+        renderGoogleResults();
+        applyGoogleCandidateToForm(places[pickedIndex >= 0 ? pickedIndex : 0]);
+        setStatus('Google 검색 완료: 후보를 선택한 뒤 자동 채우기/전체 저장을 진행하세요.');
+      } catch (error) {
+        console.error(error);
+        googleCandidates = [];
+        selectedGoogleIndexes.clear();
+        renderGoogleResults();
+        setStatus(`Google 자동 채우기 실패: ${error.message}`);
+      } finally {
+        setGoogleActionButtonsDisabled(false);
       }
     }
 
@@ -841,6 +1170,22 @@
     countrySelect.addEventListener('change', updateCityOptions);
     citySelect.addEventListener('change', loadRegisteredList);
     parseMapsBtn.addEventListener('click', parseGoogleMapsLink);
+    fillFromGoogleBtn.addEventListener('click', autofillByGooglePlaces);
+    selectAllGoogleBtn.addEventListener('click', () => {
+      selectedGoogleIndexes.clear();
+      googleCandidates.forEach((_, idx) => selectedGoogleIndexes.add(idx));
+      renderGoogleResults();
+      if (googleCandidates.length > 0) {
+        applyGoogleCandidateToForm(googleCandidates[0]);
+        setStatus(`전체 선택: ${googleCandidates[0]?.displayName || '첫 번째 장소'} 정보로 폼을 갱신했습니다.`);
+      }
+    });
+    clearGoogleSelectionBtn.addEventListener('click', () => {
+      selectedGoogleIndexes.clear();
+      renderGoogleResults();
+      setStatus('Google 결과 선택을 모두 해제했습니다.');
+    });
+    googleResultBodyEl.addEventListener('change', handleGoogleResultCheck);
     addCountryCityBtn.addEventListener('click', addCountryCityOption);
     refreshListBtn.addEventListener('click', loadRegisteredList);
     cancelEditBtn.addEventListener('click', () => clearEditMode(true));
