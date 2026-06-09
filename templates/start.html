@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>여행 시작</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: "Noto Serif KR", "Malgun Gothic", serif;
+      background:
+        radial-gradient(circle at 15% 10%, #d8ecff 0%, rgba(216, 236, 255, 0) 42%),
+        radial-gradient(circle at 85% 15%, #c7e2ff 0%, rgba(199, 226, 255, 0) 44%),
+        linear-gradient(180deg, #eef7ff 0%, #dceeff 100%);
+      color: #153454;
+    }
+
+    .hero {
+      width: min(720px, calc(100% - 32px));
+      padding: 38px 28px;
+      border-radius: 20px;
+      border: 1px solid #bcd8f5;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 16px 34px rgba(33, 88, 146, 0.16);
+      backdrop-filter: blur(3px);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 38px;
+      color: #0f4f8a;
+    }
+
+    p {
+      margin: 10px 0 0;
+      font-size: 16px;
+      color: #2f628e;
+    }
+
+    .actions {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      text-decoration: none;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #2f78d8 0%, #1f5fb5 100%);
+      box-shadow: 0 12px 24px rgba(31, 95, 181, 0.26);
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 28px rgba(31, 95, 181, 0.3);
+    }
+
+    @media (max-width: 640px) {
+      h1 {
+        font-size: 30px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="hero">
+    <h1>Travel Planner</h1>
+    <p>원하는 화면을 선택해서 시작하세요.</p>
+
+    <div class="actions">
+      <a class="action-btn" href="/itinerary">나의 여행 일정</a>
+      <a class="action-btn" href="/trip-info">여행 정보 쌓기</a>
+    </div>
+  </main>
+</body>
+</html>

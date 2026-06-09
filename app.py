@@ -1004,6 +1004,11 @@ def _collect_places_paginated(base_payload: dict, max_rows: int, max_pages: int)
 
 @app.route('/')
 def index():
+    return render_template('start.html')
+
+
+@app.route('/itinerary')
+def itinerary_page():
     return render_template('index.html')
 
 

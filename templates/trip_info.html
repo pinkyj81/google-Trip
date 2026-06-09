@@ -50,6 +50,8 @@
       margin-top: 12px;
       display: flex;
       justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .page-link {
       display: inline-flex;
@@ -65,6 +67,10 @@
     }
     .page-link:hover {
       background: #dfeeff;
+    }
+    button.page-link {
+      box-shadow: none;
+      cursor: pointer;
     }
     .combo-grid {
       margin-top: 20px;
@@ -353,6 +359,194 @@
       border-radius: 8px;
       object-fit: contain;
     }
+    .trip-picker-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .trip-picker-modal[hidden] {
+      display: none;
+    }
+    .trip-picker-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17, 47, 80, 0.4);
+      backdrop-filter: blur(2px);
+    }
+    .trip-picker-panel {
+      position: relative;
+      width: min(760px, 100%);
+      max-height: calc(100vh - 32px);
+      border: 1px solid #bcd8f5;
+      border-radius: 18px;
+      background: rgba(247, 251, 255, 0.98);
+      box-shadow: 0 16px 36px rgba(22, 74, 125, 0.24);
+      padding: 16px;
+      overflow: auto;
+    }
+    .trip-picker-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .trip-picker-title {
+      margin: 0;
+      font-size: 32px;
+      color: #1f5a95;
+      line-height: 1;
+    }
+    .trip-picker-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .trip-picker-close {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      padding: 0;
+      font-size: 24px;
+      color: #2f628e;
+      border: 1px solid #a9c7e8;
+      background: #e6f0ff;
+      box-shadow: none;
+      line-height: 1;
+    }
+    .trip-picker-mode-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .trip-picker-mode-btn {
+      min-width: 130px;
+    }
+    .trip-picker-note {
+      margin-top: 10px;
+      color: #426f98;
+      font-size: 17px;
+    }
+    .trip-picker-section {
+      margin-top: 12px;
+      border: 1px solid #cfe1f4;
+      border-radius: 12px;
+      background: #f7fbff;
+      padding: 12px;
+    }
+    .trip-picker-section[hidden] {
+      display: none;
+    }
+    .trip-picker-parse-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+    }
+    .trip-picker-google-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+      gap: 8px;
+      align-items: end;
+    }
+    .trip-picker-google-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+    .trip-picker-feed-wrap {
+      margin-top: 10px;
+      border: 1px solid #cfe1f4;
+      border-radius: 12px;
+      background: #fafdff;
+      overflow: hidden;
+    }
+    .trip-picker-feed-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: #edf5ff;
+      border-bottom: 1px solid #cfe1f4;
+      color: #205689;
+      font-weight: 700;
+    }
+    .trip-picker-feed-grid {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      max-height: 420px;
+      overflow: auto;
+    }
+    .trip-picker-feed-empty {
+      grid-column: 1 / -1;
+      border: 1px dashed #bdd6f2;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      color: #567fa5;
+      background: #f6fbff;
+    }
+    .trip-picker-post-card {
+      border: 1px solid #d6e7f9;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(24, 93, 158, 0.12);
+    }
+    .trip-picker-post-photo {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+      background: linear-gradient(145deg, #e8f3ff 0%, #d6e7fb 100%);
+    }
+    .trip-picker-post-body {
+      padding: 10px;
+    }
+    .trip-picker-post-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: #1e5488;
+      line-height: 1.35;
+      word-break: keep-all;
+    }
+    .trip-picker-post-address {
+      margin: 6px 0 0;
+      font-size: 12px;
+      color: #38648d;
+      line-height: 1.4;
+      word-break: keep-all;
+    }
+    .trip-picker-post-actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .trip-picker-select-btn {
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: none;
+    }
+    .trip-picker-select-btn.secondary.active {
+      color: #fff;
+      background: linear-gradient(135deg, #2f78d8 0%, #1f5fb5 100%);
+      border: 0;
+    }
+    .trip-picker-mini-status {
+      margin-top: 8px;
+      color: #39658f;
+      font-size: 14px;
+    }
     .list-thumb {
       width: 54px;
       height: 40px;
@@ -381,6 +575,16 @@
       .option-add-row {
         grid-template-columns: 1fr;
       }
+      .trip-picker-title {
+        font-size: 24px;
+      }
+      .trip-picker-google-grid,
+      .trip-picker-parse-grid {
+        grid-template-columns: 1fr;
+      }
+      .trip-picker-feed-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -390,6 +594,7 @@
       <h1>여행 정보</h1>
       <p class="desc">LocationInfo 테이블에 데이터를 저장합니다.</p>
       <div class="page-link-row">
+        <button id="openTripPickerModalBtn" type="button" class="page-link">장소등록 팝업 열기</button>
         <a class="page-link" href="/trip-feed">인스타 피드 보기</a>
       </div>
 
@@ -549,6 +754,94 @@
     </section>
   </main>
 
+  <section id="tripPickerModal" class="trip-picker-modal" hidden>
+    <div id="tripPickerBackdrop" class="trip-picker-backdrop"></div>
+    <div class="trip-picker-panel">
+      <div class="trip-picker-head">
+        <p class="trip-picker-title">여행 장소등록</p>
+        <div class="trip-picker-actions">
+          <button id="tripPickerSaveLocationBtn" type="button" class="secondary">저장</button>
+          <button id="closeTripPickerModalBtn" type="button" class="trip-picker-close" aria-label="닫기">×</button>
+        </div>
+      </div>
+      <div class="trip-picker-mode-row">
+        <button id="tripPickerParseBtn" type="button" class="trip-picker-mode-btn">파싱하기</button>
+        <button id="tripPickerGoogleBtn" type="button" class="trip-picker-mode-btn">구글API</button>
+      </div>
+      <p id="tripPickerNote" class="trip-picker-note">시작 방식을 선택하세요.</p>
+      <div id="tripPickerParseSection" class="trip-picker-section" hidden>
+        <div class="trip-picker-parse-grid">
+          <div>
+            <label for="tripPickerMapsUrl">구글맵스 링크</label>
+            <input id="tripPickerMapsUrl" placeholder="https://maps.google.com/..." />
+          </div>
+          <button id="runTripPickerParseBtn" type="button">링크 파싱</button>
+        </div>
+        <div id="tripPickerParseStatus" class="trip-picker-mini-status">파싱할 링크를 입력하세요.</div>
+      </div>
+      <div id="tripPickerGoogleSection" class="trip-picker-section" hidden>
+        <div class="trip-picker-google-grid">
+          <div>
+            <label for="tripPickerGoogleCountry">국가 선택</label>
+            <select id="tripPickerGoogleCountry">
+              <option value="">국가를 선택하세요</option>
+              <option value="KR">대한민국 (KR)</option>
+              <option value="US">미국 (US)</option>
+              <option value="GB">영국 (GB)</option>
+              <option value="FR">프랑스 (FR)</option>
+              <option value="JP">일본 (JP)</option>
+              <option value="IT">이탈리아 (IT)</option>
+              <option value="ES">스페인 (ES)</option>
+              <option value="DE">독일 (DE)</option>
+              <option value="CZ">체코 (CZ)</option>
+              <option value="HU">헝가리 (HU)</option>
+              <option value="PL">폴란드 (PL)</option>
+              <option value="TR">터키 (TR)</option>
+              <option value="SG">싱가포르 (SG)</option>
+              <option value="MY">말레이시아 (MY)</option>
+              <option value="HK">홍콩 (HK)</option>
+              <option value="MO">마카오 (MO)</option>
+              <option value="CN">중국 (CN)</option>
+            </select>
+          </div>
+          <div>
+            <label for="tripPickerGoogleCity">도시 선택</label>
+            <select id="tripPickerGoogleCity">
+              <option value="">도시를 선택하세요</option>
+            </select>
+          </div>
+          <div>
+            <label for="tripPickerGoogleCategory">카테고리 선택</label>
+            <select id="tripPickerGoogleCategory">
+              <option value="">카테고리를 선택하세요</option>
+              <option value="tourist_attraction">관광명소</option>
+              <option value="historical_landmark">랜드마크</option>
+              <option value="museum">박물관</option>
+              <option value="park">공원</option>
+              <option value="lodging">호텔/숙소</option>
+              <option value="restaurant">식당</option>
+              <option value="cafe">카페</option>
+            </select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="runTripPickerGoogleSearchBtn" type="button">검색</button>
+          </div>
+        </div>
+        <div class="trip-picker-feed-wrap">
+          <div class="trip-picker-feed-head">
+            <span>검색 피드</span>
+            <span id="tripPickerFeedSummary">0건</span>
+          </div>
+          <div id="tripPickerFeedGrid" class="trip-picker-feed-grid">
+            <div class="trip-picker-feed-empty">검색 결과가 여기에 표시됩니다.</div>
+          </div>
+        </div>
+        <div id="tripPickerGoogleStatus" class="trip-picker-mini-status">국가, 도시, 카테고리를 고른 뒤 검색하세요.</div>
+      </div>
+    </div>
+  </section>
+
   <script>
     const formEl = document.getElementById('locationInfoForm');
     const countrySelect = document.getElementById('tripInfoCountry');
@@ -577,12 +870,332 @@
     const newCountryInput = document.getElementById('tripInfoNewCountry');
     const newCityInput = document.getElementById('tripInfoNewCity');
     const addCountryCityBtn = document.getElementById('addCountryCityBtn');
+    const openTripPickerModalBtn = document.getElementById('openTripPickerModalBtn');
+    const tripPickerModal = document.getElementById('tripPickerModal');
+    const closeTripPickerModalBtn = document.getElementById('closeTripPickerModalBtn');
+    const tripPickerBackdrop = document.getElementById('tripPickerBackdrop');
+    const tripPickerSaveLocationBtn = document.getElementById('tripPickerSaveLocationBtn');
+    const tripPickerParseBtn = document.getElementById('tripPickerParseBtn');
+    const tripPickerGoogleBtn = document.getElementById('tripPickerGoogleBtn');
+    const tripPickerNote = document.getElementById('tripPickerNote');
+    const tripPickerParseSection = document.getElementById('tripPickerParseSection');
+    const tripPickerMapsUrl = document.getElementById('tripPickerMapsUrl');
+    const runTripPickerParseBtn = document.getElementById('runTripPickerParseBtn');
+    const tripPickerParseStatus = document.getElementById('tripPickerParseStatus');
+    const tripPickerGoogleSection = document.getElementById('tripPickerGoogleSection');
+    const tripPickerGoogleCountry = document.getElementById('tripPickerGoogleCountry');
+    const tripPickerGoogleCity = document.getElementById('tripPickerGoogleCity');
+    const tripPickerGoogleCategory = document.getElementById('tripPickerGoogleCategory');
+    const runTripPickerGoogleSearchBtn = document.getElementById('runTripPickerGoogleSearchBtn');
+    const tripPickerFeedGrid = document.getElementById('tripPickerFeedGrid');
+    const tripPickerFeedSummary = document.getElementById('tripPickerFeedSummary');
+    const tripPickerGoogleStatus = document.getElementById('tripPickerGoogleStatus');
 
     let cityOptions = {};
     let currentItems = [];
     let editingId = null;
     let googleCandidates = [];
+    let tripPickerFeedPlaces = [];
+    const selectedTripPickerIndexes = new Set();
     const selectedGoogleIndexes = new Set();
+    const TRIP_PICKER_CITY_OPTIONS = {
+      KR: ['서울', '부산', '인천'],
+      US: ['보스턴', '뉴욕', '로스앤젤레스'],
+      GB: ['런던'],
+      FR: ['파리'],
+      JP: ['도쿄', '오사카'],
+      IT: ['로마'],
+      ES: ['바르셀로나'],
+      DE: ['베를린'],
+      CZ: ['프라하'],
+      HU: ['부다페스트'],
+      PL: ['바르샤바'],
+      TR: ['이스탄불'],
+      SG: ['싱가포르'],
+      MY: ['쿠알라룸푸르'],
+      HK: ['홍콩'],
+      MO: ['마카오'],
+      CN: ['상해'],
+    };
+
+    function openTripPickerModal() {
+      tripPickerParseSection.hidden = true;
+      tripPickerGoogleSection.hidden = true;
+      tripPickerMapsUrl.value = mapsUrlInput.value.trim();
+      tripPickerParseStatus.textContent = '파싱할 링크를 입력하세요.';
+      tripPickerGoogleStatus.textContent = '국가, 도시, 카테고리를 고른 뒤 검색하세요.';
+      tripPickerFeedPlaces = [];
+      selectedTripPickerIndexes.clear();
+      renderTripPickerFeed();
+      tripPickerNote.textContent = '시작 방식을 선택하세요.';
+      tripPickerModal.hidden = false;
+    }
+
+    function closeTripPickerModal() {
+      tripPickerModal.hidden = true;
+    }
+
+    function focusFormField(targetEl) {
+      if (!targetEl) {
+        return;
+      }
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetEl.focus({ preventScroll: true });
+    }
+
+    function runTripPickerParseMode() {
+      tripPickerParseSection.hidden = false;
+      tripPickerGoogleSection.hidden = true;
+      tripPickerNote.textContent = '파싱할 링크를 입력한 뒤 링크 파싱을 누르세요.';
+      tripPickerMapsUrl.value = mapsUrlInput.value.trim();
+      tripPickerMapsUrl.focus();
+    }
+
+    async function runTripPickerParseInModal() {
+      const modalUrl = tripPickerMapsUrl.value.trim();
+      if (!modalUrl) {
+        tripPickerParseStatus.textContent = '구글맵스 링크를 먼저 입력하세요.';
+        tripPickerMapsUrl.focus();
+        return;
+      }
+
+      mapsUrlInput.value = modalUrl;
+      tripPickerParseStatus.textContent = '링크 파싱 중...';
+      runTripPickerParseBtn.disabled = true;
+      await parseGoogleMapsLink();
+      tripPickerMapsUrl.value = mapsUrlInput.value.trim();
+      tripPickerParseStatus.textContent = '파싱 완료. 아래 LocationInfo 입력값에 반영되었습니다.';
+    }
+
+    async function runTripPickerGoogleMode() {
+      tripPickerGoogleSection.hidden = false;
+      tripPickerParseSection.hidden = true;
+      tripPickerNote.textContent = '국가, 도시, 카테고리를 고른 뒤 검색을 누르세요.';
+      if (!tripPickerGoogleCountry.value) {
+        tripPickerGoogleCountry.value = 'US';
+      }
+      updateTripPickerGoogleCities();
+      if (!tripPickerGoogleCategory.value) {
+        tripPickerGoogleCategory.value = 'tourist_attraction';
+      }
+    }
+
+    function updateTripPickerGoogleCities() {
+      const code = tripPickerGoogleCountry.value || '';
+      const cities = TRIP_PICKER_CITY_OPTIONS[code] || [];
+      const previous = tripPickerGoogleCity.value;
+      tripPickerGoogleCity.innerHTML = '<option value="">도시를 선택하세요</option>';
+      cities.forEach((city) => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        tripPickerGoogleCity.appendChild(opt);
+      });
+      if (cities.includes(previous)) {
+        tripPickerGoogleCity.value = previous;
+      }
+    }
+
+    function getTripPickerCategoryKeyword(categoryValue) {
+      const categoryKeywordMap = {
+        tourist_attraction: '관광 명소',
+        historical_landmark: '랜드마크',
+        lodging: '호텔',
+        restaurant: '레스토랑',
+        cafe: '카페',
+        museum: '박물관',
+        park: '공원',
+      };
+      return categoryKeywordMap[String(categoryValue || '').trim().toLowerCase()] || '관광 명소';
+    }
+
+    function mapTripPickerCategoryToLocation(categoryValue) {
+      const categoryMap = {
+        tourist_attraction: '관광지',
+        historical_landmark: '랜드마크',
+        museum: '관광지',
+        park: '관광지',
+        lodging: '숙소',
+        restaurant: '맛집',
+        cafe: '카페',
+      };
+      return categoryMap[String(categoryValue || '').trim().toLowerCase()] || '기타';
+    }
+
+    function getSelectedTripPickerPlaces() {
+      return Array.from(selectedTripPickerIndexes)
+        .map((idx) => tripPickerFeedPlaces[idx])
+        .filter(Boolean);
+    }
+
+    function renderTripPickerFeed() {
+      if (!Array.isArray(tripPickerFeedPlaces) || !tripPickerFeedPlaces.length) {
+        tripPickerFeedGrid.innerHTML = '<div class="trip-picker-feed-empty">검색 결과가 여기에 표시됩니다.</div>';
+        tripPickerFeedSummary.textContent = '0건';
+        return;
+      }
+
+      const cards = tripPickerFeedPlaces.map((place, index) => {
+        const selected = selectedTripPickerIndexes.has(index);
+        const name = escapeHtml(getPlaceDisplayName(place) || '이름 없음');
+        const address = escapeHtml(place.formattedAddress || '-');
+        const photoUrl = place.photoUrl ? escapeHtml(place.photoUrl) : '';
+        const btnClass = selected ? 'trip-picker-select-btn secondary active' : 'trip-picker-select-btn secondary';
+        const btnLabel = selected ? '선택됨' : '선택';
+
+        return `
+          <article class="trip-picker-post-card">
+            ${photoUrl ? `<img class="trip-picker-post-photo" src="${photoUrl}" alt="${name}">` : '<div class="trip-picker-post-photo"></div>'}
+            <div class="trip-picker-post-body">
+              <p class="trip-picker-post-title">${name}</p>
+              <p class="trip-picker-post-address">${address}</p>
+              <div class="trip-picker-post-actions">
+                <button type="button" class="${btnClass}" data-trip-picker-index="${index}">${btnLabel}</button>
+              </div>
+            </div>
+          </article>
+        `;
+      });
+
+      tripPickerFeedGrid.innerHTML = cards.join('');
+      tripPickerFeedSummary.textContent = `${tripPickerFeedPlaces.length}건 / 선택 ${selectedTripPickerIndexes.size}건`;
+    }
+
+    function getPlaceDisplayName(place) {
+      if (!place) {
+        return '';
+      }
+      if (typeof place.displayName === 'object') {
+        return String(place.displayName?.text || '').trim();
+      }
+      return String(place.displayName || '').trim();
+    }
+
+    async function runTripPickerGoogleSearch() {
+      const countryCode = tripPickerGoogleCountry.value.trim();
+      const city = tripPickerGoogleCity.value.trim();
+      const category = tripPickerGoogleCategory.value.trim();
+      if (!countryCode || !city || !category) {
+        tripPickerGoogleStatus.textContent = '국가, 도시, 카테고리를 모두 선택하세요.';
+        return;
+      }
+
+      const keyword = getTripPickerCategoryKeyword(category);
+      tripPickerGoogleStatus.textContent = 'Google API 검색 중...';
+      runTripPickerGoogleSearchBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `${city} ${keyword}`,
+            search_type: 'text',
+            country_code: countryCode,
+            place_category: category,
+            max_pages: 1,
+          }),
+        });
+
+        const payload = await res.json();
+        if (!res.ok) {
+          throw new Error(payload.error || 'Google 검색 실패');
+        }
+
+        const places = Array.isArray(payload.places) ? payload.places : [];
+        tripPickerFeedPlaces = places;
+        selectedTripPickerIndexes.clear();
+        renderTripPickerFeed();
+        if (!places.length) {
+          tripPickerGoogleStatus.textContent = '검색 결과가 없습니다.';
+          return;
+        }
+
+        tripPickerGoogleStatus.textContent = `검색 결과 ${places.length}건. 피드에서 선택한 뒤 저장하세요.`;
+        setStatus(`Google API 검색 완료: ${places.length}건`);
+      } catch (error) {
+        console.error(error);
+        tripPickerGoogleStatus.textContent = `Google 검색 실패: ${error.message}`;
+      } finally {
+        runTripPickerGoogleSearchBtn.disabled = false;
+      }
+    }
+
+    function handleTripPickerFeedClick(event) {
+      const btn = event.target.closest('button[data-trip-picker-index]');
+      if (!btn) {
+        return;
+      }
+
+      const index = Number(btn.getAttribute('data-trip-picker-index'));
+      if (!Number.isFinite(index)) {
+        return;
+      }
+
+      if (selectedTripPickerIndexes.has(index)) {
+        selectedTripPickerIndexes.delete(index);
+      } else {
+        selectedTripPickerIndexes.add(index);
+      }
+
+      renderTripPickerFeed();
+    }
+
+    async function saveSelectedTripPickerToLocationInfo() {
+      const selected = getSelectedTripPickerPlaces();
+      if (!selected.length) {
+        tripPickerGoogleStatus.textContent = '저장할 장소를 먼저 선택하세요.';
+        return;
+      }
+
+      const selectedCountryOpt = tripPickerGoogleCountry.options[tripPickerGoogleCountry.selectedIndex];
+      const countryText = String(selectedCountryOpt?.textContent || '').trim().replace(/\s*\([A-Z]{2}\)\s*$/, '');
+      const city = tripPickerGoogleCity.value.trim();
+      const category = mapTripPickerCategoryToLocation(tripPickerGoogleCategory.value);
+      if (!countryText || !city) {
+        tripPickerGoogleStatus.textContent = '국가와 도시를 선택한 뒤 저장하세요.';
+        return;
+      }
+
+      tripPickerSaveLocationBtn.disabled = true;
+      tripPickerGoogleStatus.textContent = `선택 ${selected.length}건 저장 중...`;
+
+      let saved = 0;
+      let duplicated = 0;
+      for (const place of selected) {
+        const payload = {
+          country: countryText,
+          city,
+          attraction: getPlaceDisplayName(place) || '이름 없음',
+          detail: '',
+          image_url: place.photoUrl || '',
+          maps_url: place.googleMapsUri || '',
+          address: place.formattedAddress || '',
+          latitude: place.latitude,
+          longitude: place.longitude,
+          category,
+        };
+
+        const res = await fetch('/api/location-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || 'LocationInfo 저장 실패');
+        }
+        if (data.duplicate) {
+          duplicated += 1;
+        } else {
+          saved += 1;
+        }
+      }
+
+      tripPickerGoogleStatus.textContent = `LocationInfo 저장 완료: 신규 ${saved}건, 중복 ${duplicated}건`;
+      setStatus(`LocationInfo 저장 완료: 신규 ${saved}건, 중복 ${duplicated}건`);
+      await loadComboOptions();
+    }
 
     function setStatus(text) {
       statusEl.textContent = text;
@@ -1192,6 +1805,42 @@
     imageUrlInput.addEventListener('input', updateImagePreview);
     listBodyEl.addEventListener('dblclick', handleListDoubleClick);
     formEl.addEventListener('submit', saveLocationInfo);
+    openTripPickerModalBtn.addEventListener('click', openTripPickerModal);
+    closeTripPickerModalBtn.addEventListener('click', closeTripPickerModal);
+    tripPickerBackdrop.addEventListener('click', closeTripPickerModal);
+    tripPickerParseBtn.addEventListener('click', () => {
+      runTripPickerParseMode();
+    });
+    tripPickerGoogleBtn.addEventListener('click', () => {
+      runTripPickerGoogleMode().catch((error) => {
+        console.error(error);
+        setStatus(`Google 처리 실패: ${error.message}`);
+      });
+    });
+    tripPickerGoogleCountry.addEventListener('change', updateTripPickerGoogleCities);
+    runTripPickerGoogleSearchBtn.addEventListener('click', () => {
+      runTripPickerGoogleSearch().catch((error) => {
+        console.error(error);
+        tripPickerGoogleStatus.textContent = `Google 처리 실패: ${error.message}`;
+      });
+    });
+    tripPickerFeedGrid.addEventListener('click', handleTripPickerFeedClick);
+    tripPickerSaveLocationBtn.addEventListener('click', () => {
+      saveSelectedTripPickerToLocationInfo().catch((error) => {
+        console.error(error);
+        tripPickerGoogleStatus.textContent = `저장 실패: ${error.message}`;
+      }).finally(() => {
+        tripPickerSaveLocationBtn.disabled = false;
+      });
+    });
+    runTripPickerParseBtn.addEventListener('click', () => {
+      runTripPickerParseInModal().catch((error) => {
+        console.error(error);
+        tripPickerParseStatus.textContent = `파싱 처리 실패: ${error.message}`;
+      }).finally(() => {
+        runTripPickerParseBtn.disabled = false;
+      });
+    });
     loadComboOptions();
   </script>
 </body>

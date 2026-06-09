@@ -845,6 +845,9 @@
       gap: 8px;
       align-items: center;
     }
+    #savePickedLocationBtn {
+      display: none;
+    }
     .modal-form {
       display: grid;
       gap: 10px;
@@ -1330,6 +1333,16 @@
       border-color: #d3e2f4;
       color: #3a6394;
     }
+    body.blue-theme .picker-check-btn {
+      background: #f8fbff;
+      border-color: #c9dcf2;
+      color: #5a7696;
+      box-shadow: none;
+    }
+    body.blue-theme .picker-check-btn:hover {
+      background: #eef5ff;
+      transform: none;
+    }
     body.blue-theme .picker-check-btn[aria-pressed="true"] {
       color: #2f78d8;
       border-color: #9ec4ee;
@@ -1591,7 +1604,8 @@
         <div class="modal-head">
           <strong id="photoPickerTripLabel">여행 장소등록</strong>
           <div class="modal-actions">
-            <button type="button" id="savePickedPlaceBtn">저장하기</button>
+            <button type="button" id="savePickedPlaceBtn">여행정보함 저장</button>
+            <button type="button" id="savePickedLocationBtn" class="secondary-btn">LocationInfo 저장</button>
             <button type="button" id="closePhotoPickerBtn" class="mini-btn cancel" aria-label="닫기">✕</button>
           </div>
         </div>
@@ -1850,6 +1864,7 @@
     const photoPickerBackdrop = document.getElementById('photoPickerBackdrop');
     const closePhotoPickerBtn = document.getElementById('closePhotoPickerBtn');
     const savePickedPlaceBtn = document.getElementById('savePickedPlaceBtn');
+    const savePickedLocationBtn = document.getElementById('savePickedLocationBtn');
     const photoPickerTripLabel = document.getElementById('photoPickerTripLabel');
     const startParseModeBtn = document.getElementById('startParseModeBtn');
     const startGoogleModeBtn = document.getElementById('startGoogleModeBtn');
@@ -3662,6 +3677,22 @@
       return data.place;
     }
 
+    async function createLocationInfoItem(payload) {
+      const response = await fetch('/api/location-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || 'LocationInfo 저장 실패');
+      }
+      return {
+        id: data.id,
+        duplicate: Boolean(data.duplicate),
+      };
+    }
+
     function openPhotoPicker() {
       const tripId = tripSelectForPlace.value;
       if (!tripId) {
@@ -3677,6 +3708,7 @@
       selectedPickedPlaces = new Map();
       photoPickerResults.innerHTML = '';
       savePickedPlaceBtn.disabled = true;
+      savePickedLocationBtn.disabled = true;
       modalCountry.value = countryCodeSelect.value || '';
       updateModalCityOptions();
       modalCitySelect.value = citySelect.value || '';
@@ -4083,8 +4115,9 @@
 
           const selectedCount = selectedPickedPlaces.size;
           savePickedPlaceBtn.disabled = selectedCount === 0;
+          savePickedLocationBtn.disabled = selectedCount === 0;
           if (selectedCount > 0) {
-            photoPickerStatus.textContent = `선택 ${selectedCount}건. 저장하기를 누르면 모두 여행 장소함에 저장됩니다.`;
+            photoPickerStatus.textContent = `선택 ${selectedCount}건. 여행정보함 저장 또는 LocationInfo 저장을 선택하세요.`;
           } else {
             photoPickerStatus.textContent = '저장할 장소를 선택하세요.';
           }
@@ -4119,6 +4152,7 @@
       photoPickerResults.innerHTML = '';
       selectedPickedPlaces = new Map();
       savePickedPlaceBtn.disabled = true;
+      savePickedLocationBtn.disabled = true;
 
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -4165,7 +4199,57 @@
         await createTripPlace(payload);
       }
 
-      statusText.textContent = `여행 장소함에 ${pickedItems.length}건 저장 완료`;
+      statusText.textContent = `여행 장소함 ${pickedItems.length}건 저장 완료`;
+      closePhotoPicker();
+    }
+
+    async function savePickedPlaceToLocationInfo() {
+      const selectedCountryCode = String(modalCountry.value || '').trim();
+      const selectedCountryOption = modalCountry.options[modalCountry.selectedIndex] || null;
+      const selectedCountryText = selectedCountryOption ? String(selectedCountryOption.textContent || '').trim() : '';
+      const selectedCountry = selectedCountryText
+        ? selectedCountryText.replace(/\s*\([A-Z]{2}\)\s*$/, '').trim()
+        : selectedCountryCode;
+      const selectedCity = String(modalCitySelect.value || '').trim();
+      if (!selectedCountryCode || !selectedCity) {
+        throw new Error('국가와 도시를 선택하세요.');
+      }
+      const selectedCategory = (modalCategory.value || 'point_of_interest').trim().toLowerCase();
+      const pickedItems = Array.from(selectedPickedPlaces.values());
+      if (!pickedItems.length) {
+        throw new Error('저장할 장소를 먼저 선택하세요.');
+      }
+
+      let locationSaved = 0;
+      let locationDuplicated = 0;
+
+      for (const pickedPlace of pickedItems) {
+        const displayName = typeof pickedPlace.displayName === 'object'
+          ? (pickedPlace.displayName?.text || '이름 없음')
+          : (pickedPlace.displayName || '이름 없음');
+
+        const locationPayload = {
+          country: selectedCountry,
+          city: selectedCity,
+          attraction: displayName,
+          detail: '',
+          image_url: pickedPlace.photoUrl || '',
+          maps_url: pickedPlace.googleMapsUri || '',
+          address: pickedPlace.formattedAddress || '',
+          latitude: pickedPlace.latitude,
+          longitude: pickedPlace.longitude,
+          category: selectedCategory,
+        };
+
+        const locationResult = await createLocationInfoItem(locationPayload);
+        if (locationResult.duplicate) {
+          locationDuplicated += 1;
+        } else {
+          locationSaved += 1;
+        }
+      }
+
+      statusText.textContent = `LocationInfo 신규 ${locationSaved}건 저장 (중복 ${locationDuplicated}건)`;
       closePhotoPicker();
     }
 
@@ -4384,6 +4468,13 @@
     savePickedPlaceBtn.addEventListener('click', async () => {
       try {
         await savePickedPlaceToTrip();
+      } catch (error) {
+        photoPickerStatus.textContent = error.message;
+      }
+    });
+    savePickedLocationBtn.addEventListener('click', async () => {
+      try {
+        await savePickedPlaceToLocationInfo();
       } catch (error) {
         photoPickerStatus.textContent = error.message;
       }
