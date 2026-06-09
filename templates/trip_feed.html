@@ -105,6 +105,17 @@
       color: #205689;
       font-weight: 700;
     }
+    .feed-head-left {
+      display: inline-flex;
+      gap: 8px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .feed-hint {
+      font-size: 12px;
+      font-weight: 600;
+      color: #4f7ea8;
+    }
     .feed-grid {
       padding: 12px;
       display: grid;
@@ -126,6 +137,10 @@
       background: #fff;
       overflow: hidden;
       box-shadow: 0 8px 20px rgba(24, 93, 158, 0.12);
+      cursor: pointer;
+    }
+    .post-card:hover {
+      box-shadow: 0 10px 24px rgba(24, 93, 158, 0.2);
     }
     .post-header {
       display: flex;
@@ -227,12 +242,108 @@
       color: #2f628e;
       font-size: 14px;
     }
+    .edit-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .edit-modal[hidden] {
+      display: none;
+    }
+    .edit-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17, 47, 80, 0.42);
+      backdrop-filter: blur(2px);
+    }
+    .edit-modal-panel {
+      position: relative;
+      width: min(760px, 100%);
+      max-height: calc(100vh - 32px);
+      border: 1px solid #bcd8f5;
+      border-radius: 18px;
+      background: rgba(247, 251, 255, 0.98);
+      box-shadow: 0 16px 36px rgba(22, 74, 125, 0.24);
+      padding: 14px;
+      overflow: auto;
+    }
+    .edit-modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .edit-modal-title {
+      margin: 0;
+      color: #1f5a95;
+      font-size: 24px;
+    }
+    .edit-modal-actions {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .edit-close-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      padding: 0;
+      font-size: 24px;
+      color: #2f628e;
+      border: 1px solid #a9c7e8;
+      background: #e6f0ff;
+      box-shadow: none;
+      line-height: 1;
+    }
+    .edit-grid {
+      display: grid;
+      gap: 10px;
+    }
+    .edit-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .edit-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .edit-grid textarea,
+    .edit-grid input,
+    .edit-grid select {
+      width: 100%;
+      border: 1px solid #bcd8f5;
+      border-radius: 10px;
+      padding: 10px 11px;
+      font-size: 14px;
+      background: #f7fbff;
+      color: #1f4e7f;
+      font-family: inherit;
+    }
+    .edit-grid textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+    .edit-mini-note {
+      margin: 0;
+      color: #4f7ea8;
+      font-size: 13px;
+    }
 
     @media (max-width: 700px) {
       .combo-grid {
         grid-template-columns: 1fr;
       }
       .feed-grid {
+        grid-template-columns: 1fr;
+      }
+      .edit-grid-2,
+      .edit-grid-3 {
         grid-template-columns: 1fr;
       }
     }
@@ -266,7 +377,10 @@
 
       <div class="feed-wrap">
         <div class="feed-head">
-          <span>인스타 스타일 피드</span>
+          <span class="feed-head-left">
+            <span>인스타 스타일 피드</span>
+            <span class="feed-hint">카드 더블클릭으로 수정</span>
+          </span>
           <span id="feedSummary">0개 포스트</span>
         </div>
         <div id="tripFeed" class="feed-grid">
@@ -278,14 +392,88 @@
     </section>
   </main>
 
+  <section id="feedEditModal" class="edit-modal" hidden>
+    <div id="feedEditBackdrop" class="edit-modal-backdrop"></div>
+    <div class="edit-modal-panel">
+      <div class="edit-modal-head">
+        <p id="feedEditTitle" class="edit-modal-title">포스트 수정</p>
+        <div class="edit-modal-actions">
+          <button id="feedEditSaveBtn" type="button">저장</button>
+          <button id="feedEditCloseBtn" type="button" class="edit-close-btn" aria-label="닫기">×</button>
+        </div>
+      </div>
+      <div class="edit-grid">
+        <p class="edit-mini-note">국가/도시는 유지하고, 장소 정보만 수정합니다.</p>
+        <div>
+          <label for="feedEditAttraction">관광지명</label>
+          <input id="feedEditAttraction" />
+        </div>
+        <div class="edit-grid-3">
+          <div>
+            <label for="feedEditCategory">구분</label>
+            <select id="feedEditCategory">
+              <option value="">구분 선택</option>
+              <option value="랜드마크">랜드마크</option>
+              <option value="관광지">관광지</option>
+              <option value="맛집">맛집</option>
+              <option value="카페">카페</option>
+              <option value="숙소">숙소</option>
+              <option value="쇼핑">쇼핑</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+          <div>
+            <label for="feedEditLatitude">위도</label>
+            <input id="feedEditLatitude" placeholder="예: 37.5665" />
+          </div>
+          <div>
+            <label for="feedEditLongitude">경도</label>
+            <input id="feedEditLongitude" placeholder="예: 126.9780" />
+          </div>
+        </div>
+        <div>
+          <label for="feedEditAddress">주소</label>
+          <input id="feedEditAddress" />
+        </div>
+        <div>
+          <label for="feedEditMapsUrl">구글맵 링크</label>
+          <input id="feedEditMapsUrl" placeholder="https://maps.google.com/..." />
+        </div>
+        <div>
+          <label for="feedEditImageUrl">이미지 경로</label>
+          <input id="feedEditImageUrl" />
+        </div>
+        <div>
+          <label for="feedEditDetail">상세 설명</label>
+          <textarea id="feedEditDetail"></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <script>
     const countrySelect = document.getElementById('feedCountry');
     const citySelect = document.getElementById('feedCity');
     const feedEl = document.getElementById('tripFeed');
     const feedSummaryEl = document.getElementById('feedSummary');
     const statusEl = document.getElementById('feedStatus');
+    const feedEditModal = document.getElementById('feedEditModal');
+    const feedEditBackdrop = document.getElementById('feedEditBackdrop');
+    const feedEditCloseBtn = document.getElementById('feedEditCloseBtn');
+    const feedEditSaveBtn = document.getElementById('feedEditSaveBtn');
+    const feedEditTitle = document.getElementById('feedEditTitle');
+    const feedEditAttraction = document.getElementById('feedEditAttraction');
+    const feedEditCategory = document.getElementById('feedEditCategory');
+    const feedEditAddress = document.getElementById('feedEditAddress');
+    const feedEditLatitude = document.getElementById('feedEditLatitude');
+    const feedEditLongitude = document.getElementById('feedEditLongitude');
+    const feedEditMapsUrl = document.getElementById('feedEditMapsUrl');
+    const feedEditImageUrl = document.getElementById('feedEditImageUrl');
+    const feedEditDetail = document.getElementById('feedEditDetail');
 
     let cityOptions = {};
+    let currentFeedItems = [];
+    let editingItemId = null;
 
     function setStatus(text) {
       statusEl.textContent = text;
@@ -318,7 +506,87 @@
       return '';
     }
 
+    function openEditModal(item) {
+      if (!item || !item.id) {
+        return;
+      }
+
+      editingItemId = Number(item.id);
+      feedEditTitle.textContent = `포스트 수정 (ID: ${editingItemId})`;
+      feedEditAttraction.value = String(item.attraction || '');
+      feedEditCategory.value = String(item.category || '');
+      feedEditAddress.value = String(item.address || '');
+      feedEditLatitude.value = item.latitude == null ? '' : String(item.latitude);
+      feedEditLongitude.value = item.longitude == null ? '' : String(item.longitude);
+      feedEditMapsUrl.value = String(item.maps_url || '');
+      feedEditImageUrl.value = String(item.image_url || '');
+      feedEditDetail.value = String(item.detail || '');
+      feedEditModal.hidden = false;
+    }
+
+    function closeEditModal() {
+      feedEditModal.hidden = true;
+      editingItemId = null;
+    }
+
+    async function saveEditModal() {
+      if (!editingItemId) {
+        return;
+      }
+
+      const current = currentFeedItems.find((entry) => Number(entry.id) === Number(editingItemId));
+      if (!current) {
+        setStatus('수정할 원본 데이터를 찾지 못했습니다. 목록을 다시 불러옵니다.');
+        await loadFeedItems();
+        closeEditModal();
+        return;
+      }
+
+      const body = {
+        country: String(current.country || '').trim(),
+        city: String(current.city || '').trim(),
+        attraction: feedEditAttraction.value.trim(),
+        detail: feedEditDetail.value.trim(),
+        image_url: feedEditImageUrl.value.trim(),
+        maps_url: feedEditMapsUrl.value.trim(),
+        address: feedEditAddress.value.trim(),
+        latitude: feedEditLatitude.value.trim(),
+        longitude: feedEditLongitude.value.trim(),
+        category: feedEditCategory.value.trim(),
+      };
+
+      if (!body.attraction) {
+        setStatus('관광지명은 비워둘 수 없습니다.');
+        feedEditAttraction.focus();
+        return;
+      }
+
+      feedEditSaveBtn.disabled = true;
+      setStatus('수정 저장 중...');
+      try {
+        const res = await fetch(`/api/location-info/${editingItemId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const payload = await res.json();
+        if (!res.ok) {
+          throw new Error(payload.error || '수정 실패');
+        }
+
+        closeEditModal();
+        await loadFeedItems();
+        setStatus(`수정 완료 (ID: ${payload.id ?? editingItemId})`);
+      } catch (error) {
+        console.error(error);
+        setStatus(`수정 실패: ${error.message}`);
+      } finally {
+        feedEditSaveBtn.disabled = false;
+      }
+    }
+
     function renderFeed(items) {
+      currentFeedItems = Array.isArray(items) ? items : [];
       if (!Array.isArray(items) || items.length === 0) {
         feedEl.innerHTML = '<div class="feed-empty">선택한 국가/도시에 해당하는 여행 포스트가 없습니다.</div>';
         feedSummaryEl.textContent = '0개 포스트';
@@ -342,7 +610,7 @@
           : '';
 
         return `
-          <article class="post-card">
+          <article class="post-card" data-id="${escapeHtml(item.id ?? '')}">
             <div class="post-header">
               <div class="post-header-left">
                 <p class="post-city">${city}</p>
@@ -419,6 +687,25 @@
       loadFeedItems();
     }
 
+    function handleFeedDoubleClick(event) {
+      const card = event.target.closest('.post-card[data-id]');
+      if (!card) {
+        return;
+      }
+
+      const itemId = Number(card.dataset.id);
+      if (!Number.isFinite(itemId)) {
+        return;
+      }
+
+      const item = currentFeedItems.find((entry) => Number(entry.id) === itemId);
+      if (!item) {
+        return;
+      }
+
+      openEditModal(item);
+    }
+
     async function loadComboOptions() {
       const prevCountry = countrySelect.value;
       const prevCity = citySelect.value;
@@ -461,6 +748,12 @@
 
     countrySelect.addEventListener('change', updateCityOptions);
     citySelect.addEventListener('change', loadFeedItems);
+    feedEl.addEventListener('dblclick', handleFeedDoubleClick);
+    feedEditBackdrop.addEventListener('click', closeEditModal);
+    feedEditCloseBtn.addEventListener('click', closeEditModal);
+    feedEditSaveBtn.addEventListener('click', () => {
+      saveEditModal();
+    });
 
     loadComboOptions();
   </script>

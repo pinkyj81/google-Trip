@@ -257,6 +257,17 @@
       color: #205689;
       font-weight: 700;
     }
+    .list-head-left {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .list-hint {
+      font-size: 12px;
+      font-weight: 600;
+      color: #4f7ea8;
+    }
     .list-body {
       max-height: 260px;
       overflow: auto;
@@ -334,6 +345,12 @@
     }
     tr.editing-row td {
       background: #e8f3ff;
+    }
+    .list-body tr[data-id] {
+      cursor: pointer;
+    }
+    .list-body tr[data-id]:hover td {
+      background: #f2f8ff;
     }
     .empty-row {
       text-align: center;
@@ -628,7 +645,10 @@
 
         <div class="list-wrap">
           <div class="list-head">
-            <span>등록된 리스트</span>
+            <span class="list-head-left">
+              <span>등록된 리스트</span>
+              <span class="list-hint">행 더블클릭으로 수정</span>
+            </span>
             <span id="listSummary">0건</span>
           </div>
           <div class="list-body">
@@ -805,10 +825,22 @@
             </select>
           </div>
           <div>
+            <label for="tripPickerGoogleCountryCustom">국가 직접 입력</label>
+            <input id="tripPickerGoogleCountryCustom" placeholder="예: 그리스" />
+          </div>
+          <div>
+            <label for="tripPickerGoogleCountryCodeCustom">국가코드 직접 입력</label>
+            <input id="tripPickerGoogleCountryCodeCustom" placeholder="예: GR" maxlength="2" />
+          </div>
+          <div>
             <label for="tripPickerGoogleCity">도시 선택</label>
             <select id="tripPickerGoogleCity">
               <option value="">도시를 선택하세요</option>
             </select>
+          </div>
+          <div>
+            <label for="tripPickerGoogleCityCustom">도시 직접 입력</label>
+            <input id="tripPickerGoogleCityCustom" placeholder="예: 샌프란시스코" />
           </div>
           <div>
             <label for="tripPickerGoogleCategory">카테고리 선택</label>
@@ -884,7 +916,10 @@
     const tripPickerParseStatus = document.getElementById('tripPickerParseStatus');
     const tripPickerGoogleSection = document.getElementById('tripPickerGoogleSection');
     const tripPickerGoogleCountry = document.getElementById('tripPickerGoogleCountry');
+    const tripPickerGoogleCountryCustom = document.getElementById('tripPickerGoogleCountryCustom');
+    const tripPickerGoogleCountryCodeCustom = document.getElementById('tripPickerGoogleCountryCodeCustom');
     const tripPickerGoogleCity = document.getElementById('tripPickerGoogleCity');
+    const tripPickerGoogleCityCustom = document.getElementById('tripPickerGoogleCityCustom');
     const tripPickerGoogleCategory = document.getElementById('tripPickerGoogleCategory');
     const runTripPickerGoogleSearchBtn = document.getElementById('runTripPickerGoogleSearchBtn');
     const tripPickerFeedGrid = document.getElementById('tripPickerFeedGrid');
@@ -970,7 +1005,7 @@
     async function runTripPickerGoogleMode() {
       tripPickerGoogleSection.hidden = false;
       tripPickerParseSection.hidden = true;
-      tripPickerNote.textContent = '국가, 도시, 카테고리를 고른 뒤 검색을 누르세요.';
+      tripPickerNote.textContent = '국가/도시를 선택하거나 직접 입력한 뒤 검색을 누르세요.';
       if (!tripPickerGoogleCountry.value) {
         tripPickerGoogleCountry.value = 'US';
       }
@@ -1072,11 +1107,15 @@
     }
 
     async function runTripPickerGoogleSearch() {
-      const countryCode = tripPickerGoogleCountry.value.trim();
-      const city = tripPickerGoogleCity.value.trim();
+      const selectedCountryCode = tripPickerGoogleCountry.value.trim().toUpperCase();
+      const customCountryName = tripPickerGoogleCountryCustom.value.trim();
+      const customCountryCode = tripPickerGoogleCountryCodeCustom.value.trim().toUpperCase();
+      const countryCodeRaw = customCountryCode || selectedCountryCode;
+      const countryCode = /^[A-Z]{2}$/.test(countryCodeRaw) ? countryCodeRaw : '';
+      const city = (tripPickerGoogleCityCustom.value || tripPickerGoogleCity.value || '').trim();
       const category = tripPickerGoogleCategory.value.trim();
-      if (!countryCode || !city || !category) {
-        tripPickerGoogleStatus.textContent = '국가, 도시, 카테고리를 모두 선택하세요.';
+      if ((!countryCode && !customCountryName) || !city || !category) {
+        tripPickerGoogleStatus.textContent = '국가(선택/직접입력), 도시(선택/직접입력), 카테고리를 모두 지정하세요.';
         return;
       }
 
@@ -1089,7 +1128,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            query: `${city} ${keyword}`,
+            query: `${city} ${customCountryName || ''} ${keyword}`.trim(),
             search_type: 'text',
             country_code: countryCode,
             place_category: category,
@@ -1149,11 +1188,12 @@
       }
 
       const selectedCountryOpt = tripPickerGoogleCountry.options[tripPickerGoogleCountry.selectedIndex];
-      const countryText = String(selectedCountryOpt?.textContent || '').trim().replace(/\s*\([A-Z]{2}\)\s*$/, '');
-      const city = tripPickerGoogleCity.value.trim();
+      const selectedCountryText = String(selectedCountryOpt?.textContent || '').trim().replace(/\s*\([A-Z]{2}\)\s*$/, '');
+      const countryText = tripPickerGoogleCountryCustom.value.trim() || selectedCountryText || tripPickerGoogleCountryCodeCustom.value.trim().toUpperCase();
+      const city = (tripPickerGoogleCityCustom.value || tripPickerGoogleCity.value || '').trim();
       const category = mapTripPickerCategoryToLocation(tripPickerGoogleCategory.value);
       if (!countryText || !city) {
-        tripPickerGoogleStatus.textContent = '국가와 도시를 선택한 뒤 저장하세요.';
+        tripPickerGoogleStatus.textContent = '국가와 도시(선택 또는 직접입력)를 지정한 뒤 저장하세요.';
         return;
       }
 
