@@ -170,6 +170,24 @@ def _ensure_location_option_table(conn: pyodbc.Connection) -> None:
     conn.commit()
 
 
+def _ensure_location_favorite_table(conn: pyodbc.Connection) -> None:
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        IF OBJECT_ID('dbo.location_info_favorites', 'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.location_info_favorites (
+                location_info_id INT NOT NULL PRIMARY KEY,
+                created_at DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+                CONSTRAINT FK_location_info_favorites_location_info FOREIGN KEY (location_info_id)
+                    REFERENCES dbo.LocationInfo(id) ON DELETE CASCADE
+            )
+        END
+        '''
+    )
+    conn.commit()
+
+
 def _extract_user_memo_text(note_text: str) -> str:
     text = str(note_text or '').strip()
     if not text:
@@ -1014,12 +1032,108 @@ def itinerary_page():
 
 @app.route('/trip-info')
 def trip_info_page():
-    return render_template('trip_info.html')
+    # 초기 국가/도시 데이터를 서버에서 제공해서 페이지 로드 시 바로 보여주기
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_option_table(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT country, city
+                FROM (
+                    SELECT
+                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
+                    FROM dbo.LocationInfo
+                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
+                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
+
+                    UNION
+
+                    SELECT
+                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
+                    FROM dbo.location_info_options
+                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
+                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
+                ) X
+                ORDER BY country, city
+                '''
+            )
+            rows = cursor.fetchall()
+
+        cities_by_country: dict[str, list[str]] = {}
+        for row in rows:
+            country = str(row.country or '').strip()
+            city = str(row.city or '').strip()
+            if not country or not city:
+                continue
+            cities = cities_by_country.setdefault(country, [])
+            if city not in cities:
+                cities.append(city)
+
+        countries = sorted(cities_by_country.keys(), key=lambda item: item.lower())
+        for key in list(cities_by_country.keys()):
+            cities_by_country[key] = sorted(cities_by_country[key], key=lambda item: item.lower())
+
+        initial_data = {'countries': countries, 'cities_by_country': cities_by_country}
+    except (RuntimeError, pyodbc.Error):
+        initial_data = {'countries': [], 'cities_by_country': {}}
+    
+    return render_template('trip_info.html', initial_data=initial_data)
 
 
 @app.route('/trip-feed')
 def trip_feed_page():
-    return render_template('trip_feed.html')
+    # 초기 국가/도시 데이터를 서버에서 제공해서 페이지 로드 시 바로 보여주기
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_option_table(conn)
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT country, city
+                FROM (
+                    SELECT
+                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
+                    FROM dbo.LocationInfo
+                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
+                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
+
+                    UNION
+
+                    SELECT
+                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
+                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
+                    FROM dbo.location_info_options
+                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
+                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
+                ) X
+                ORDER BY country, city
+                '''
+            )
+            rows = cursor.fetchall()
+
+        cities_by_country: dict[str, list[str]] = {}
+        for row in rows:
+            country = str(row.country or '').strip()
+            city = str(row.city or '').strip()
+            if not country or not city:
+                continue
+            cities = cities_by_country.setdefault(country, [])
+            if city not in cities:
+                cities.append(city)
+
+        countries = sorted(cities_by_country.keys(), key=lambda item: item.lower())
+        for key in list(cities_by_country.keys()):
+            cities_by_country[key] = sorted(cities_by_country[key], key=lambda item: item.lower())
+
+        initial_data = {'countries': countries, 'cities_by_country': cities_by_country}
+    except (RuntimeError, pyodbc.Error):
+        initial_data = {'countries': [], 'cities_by_country': {}}
+    
+    return render_template('trip_feed.html', initial_data=initial_data)
 
 
 @app.route('/api/location-info/options', methods=['GET'])
@@ -1172,6 +1286,101 @@ def location_info_list():
         return jsonify({'items': items})
     except (RuntimeError, pyodbc.Error) as exc:
         return jsonify({'error': f'목록 조회 실패: {exc}'}), 500
+
+
+@app.route('/api/location-info/favorites', methods=['GET'])
+def location_info_favorites_list():
+    ids_raw = str(request.args.get('ids') or '').strip()
+    filter_ids: list[int] = []
+    if ids_raw:
+        for token in ids_raw.split(','):
+            token = token.strip()
+            if token.isdigit():
+                val = int(token)
+                if val > 0:
+                    filter_ids.append(val)
+
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_favorite_table(conn)
+            cursor = conn.cursor()
+
+            if filter_ids:
+                placeholders = ','.join(['?'] * len(filter_ids))
+                cursor.execute(
+                    f'''
+                    SELECT location_info_id
+                    FROM dbo.location_info_favorites
+                    WHERE location_info_id IN ({placeholders})
+                    ''',
+                    tuple(filter_ids),
+                )
+            else:
+                cursor.execute(
+                    '''
+                    SELECT location_info_id
+                    FROM dbo.location_info_favorites
+                    '''
+                )
+
+            rows = cursor.fetchall()
+
+        favorite_ids = [
+            int(row.location_info_id)
+            for row in rows
+            if row is not None and getattr(row, 'location_info_id', None) is not None
+        ]
+        return jsonify({'favorite_ids': favorite_ids})
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'하트 목록 조회 실패: {exc}'}), 500
+
+
+@app.route('/api/location-info/favorites', methods=['POST'])
+def upsert_location_info_favorite():
+    data = request.get_json(silent=True) or {}
+    item_id = _safe_int(data.get('id'))
+    selected = bool(data.get('selected'))
+
+    if not item_id or item_id <= 0:
+        return jsonify({'error': '유효한 id가 필요합니다.'}), 400
+
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_favorite_table(conn)
+            cursor = conn.cursor()
+
+            if selected:
+                cursor.execute(
+                    '''
+                    IF EXISTS (SELECT 1 FROM dbo.LocationInfo WHERE id = ?)
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1
+                            FROM dbo.location_info_favorites
+                            WHERE location_info_id = ?
+                        )
+                        BEGIN
+                            INSERT INTO dbo.location_info_favorites (location_info_id)
+                            VALUES (?)
+                        END
+                    END
+                    ''',
+                    (item_id, item_id, item_id),
+                )
+            else:
+                cursor.execute(
+                    '''
+                    DELETE FROM dbo.location_info_favorites
+                    WHERE location_info_id = ?
+                    ''',
+                    (item_id,),
+                )
+
+            conn.commit()
+
+        return jsonify({'message': 'ok', 'id': item_id, 'selected': selected})
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'하트 저장 실패: {exc}'}), 500
 
 
 @app.route('/api/location-info', methods=['POST'])

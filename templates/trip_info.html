@@ -104,7 +104,7 @@
     }
     .top-field-grid {
       display: grid;
-      grid-template-columns: 220px minmax(0, 1fr);
+      grid-template-columns: 220px 220px minmax(0, 1fr);
       gap: 12px;
       align-items: end;
     }
@@ -493,6 +493,27 @@
       color: #205689;
       font-weight: 700;
     }
+    .trip-picker-feed-head-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+    }
+    .trip-picker-select-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #2b5f91;
+      user-select: none;
+      cursor: pointer;
+    }
+    .trip-picker-select-all input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2f78d8;
+      cursor: pointer;
+    }
     .trip-picker-feed-grid {
       padding: 12px;
       display: grid;
@@ -621,6 +642,9 @@
             <label for="tripInfoCountry">국가 선택</label>
             <select id="tripInfoCountry" required>
               <option value="">국가를 선택하세요</option>
+              {% for country in initial_data.countries %}
+              <option value="{{ country }}">{{ country }}</option>
+              {% endfor %}
             </select>
           </div>
           <div>
@@ -696,6 +720,10 @@
                 <option value="쇼핑">쇼핑</option>
                 <option value="기타">기타</option>
               </select>
+            </div>
+            <div>
+              <label for="tripInfoCityText">도시명</label>
+              <input id="tripInfoCityText" />
             </div>
             <div>
               <label for="tripInfoAttraction">관광지명 (Attraction)</label>
@@ -863,7 +891,13 @@
         <div class="trip-picker-feed-wrap">
           <div class="trip-picker-feed-head">
             <span>검색 피드</span>
-            <span id="tripPickerFeedSummary">0건</span>
+            <div class="trip-picker-feed-head-right">
+              <label class="trip-picker-select-all" for="tripPickerSelectAllCheckbox">
+                <input id="tripPickerSelectAllCheckbox" type="checkbox" />
+                전체 선택
+              </label>
+              <span id="tripPickerFeedSummary">0건</span>
+            </div>
           </div>
           <div id="tripPickerFeedGrid" class="trip-picker-feed-grid">
             <div class="trip-picker-feed-empty">검색 결과가 여기에 표시됩니다.</div>
@@ -878,6 +912,7 @@
     const formEl = document.getElementById('locationInfoForm');
     const countrySelect = document.getElementById('tripInfoCountry');
     const citySelect = document.getElementById('tripInfoCity');
+    const cityTextInput = document.getElementById('tripInfoCityText');
     const mapsUrlInput = document.getElementById('tripInfoMapsUrl');
     const parseMapsBtn = document.getElementById('parseMapsBtn');
     const addressInput = document.getElementById('tripInfoAddress');
@@ -924,9 +959,15 @@
     const runTripPickerGoogleSearchBtn = document.getElementById('runTripPickerGoogleSearchBtn');
     const tripPickerFeedGrid = document.getElementById('tripPickerFeedGrid');
     const tripPickerFeedSummary = document.getElementById('tripPickerFeedSummary');
+    const tripPickerSelectAllCheckbox = document.getElementById('tripPickerSelectAllCheckbox');
     const tripPickerGoogleStatus = document.getElementById('tripPickerGoogleStatus');
 
     let cityOptions = {};
+    let initialCountries = {{ initial_data.countries | tojson }};
+    let initialCitiesByCountry = {{ initial_data.cities_by_country | tojson }};
+    
+    // 페이지 로드 시 초기 데이터 설정
+    cityOptions = initialCitiesByCountry || {};
     let currentItems = [];
     let editingId = null;
     let googleCandidates = [];
@@ -1063,10 +1104,29 @@
         .filter(Boolean);
     }
 
+    function syncTripPickerSelectAllCheckbox() {
+      const totalCount = Array.isArray(tripPickerFeedPlaces) ? tripPickerFeedPlaces.length : 0;
+      if (!tripPickerSelectAllCheckbox) {
+        return;
+      }
+      if (totalCount === 0) {
+        tripPickerSelectAllCheckbox.checked = false;
+        tripPickerSelectAllCheckbox.indeterminate = false;
+        tripPickerSelectAllCheckbox.disabled = true;
+        return;
+      }
+
+      const selectedCount = selectedTripPickerIndexes.size;
+      tripPickerSelectAllCheckbox.disabled = false;
+      tripPickerSelectAllCheckbox.checked = selectedCount === totalCount;
+      tripPickerSelectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+    }
+
     function renderTripPickerFeed() {
       if (!Array.isArray(tripPickerFeedPlaces) || !tripPickerFeedPlaces.length) {
         tripPickerFeedGrid.innerHTML = '<div class="trip-picker-feed-empty">검색 결과가 여기에 표시됩니다.</div>';
         tripPickerFeedSummary.textContent = '0건';
+        syncTripPickerSelectAllCheckbox();
         return;
       }
 
@@ -1094,6 +1154,7 @@
 
       tripPickerFeedGrid.innerHTML = cards.join('');
       tripPickerFeedSummary.textContent = `${tripPickerFeedPlaces.length}건 / 선택 ${selectedTripPickerIndexes.size}건`;
+      syncTripPickerSelectAllCheckbox();
     }
 
     function getPlaceDisplayName(place) {
@@ -1180,6 +1241,17 @@
       renderTripPickerFeed();
     }
 
+    function handleTripPickerSelectAllChange(event) {
+      const checked = Boolean(event.target?.checked);
+      selectedTripPickerIndexes.clear();
+      if (checked) {
+        tripPickerFeedPlaces.forEach((_, index) => {
+          selectedTripPickerIndexes.add(index);
+        });
+      }
+      renderTripPickerFeed();
+    }
+
     async function saveSelectedTripPickerToLocationInfo() {
       const selected = getSelectedTripPickerPlaces();
       if (!selected.length) {
@@ -1251,6 +1323,7 @@
     }
 
     function clearFormOnly() {
+      cityTextInput.value = '';
       mapsUrlInput.value = '';
       addressInput.value = '';
       latitudeInput.value = '';
@@ -1442,6 +1515,7 @@
       updateCityOptions();
       ensureOption(citySelect, item.city || '');
       citySelect.value = item.city || '';
+      cityTextInput.value = item.city || '';
       ensureOption(categoryInput, item.category || '');
 
       attractionInput.value = item.attraction || '';
@@ -1473,6 +1547,10 @@
 
       if (cities.includes(prev)) {
         citySelect.value = prev;
+      }
+
+      if (!cityTextInput.value.trim()) {
+        cityTextInput.value = citySelect.value || '';
       }
 
       loadRegisteredList();
@@ -1606,7 +1684,7 @@
 
     async function autofillByGooglePlaces() {
       const attraction = attractionInput.value.trim();
-      const city = citySelect.value.trim();
+      const city = (cityTextInput.value.trim() || citySelect.value.trim());
       const country = countrySelect.value.trim();
 
       if (!attraction) {
@@ -1699,6 +1777,7 @@
         updateCityOptions();
         ensureOption(citySelect, city);
         citySelect.value = city;
+        cityTextInput.value = city;
         await loadRegisteredList();
 
         newCountryInput.value = '';
@@ -1742,6 +1821,9 @@
         if (prevCity && Array.isArray(cityOptions[countrySelect.value]) && cityOptions[countrySelect.value].includes(prevCity)) {
           citySelect.value = prevCity;
         }
+        if (!cityTextInput.value.trim()) {
+          cityTextInput.value = citySelect.value || '';
+        }
         await loadRegisteredList();
         setStatus('콤보 데이터를 불러왔습니다. 등록 리스트를 확인하고 추가하세요.');
       } catch (error) {
@@ -1753,9 +1835,26 @@
     async function saveLocationInfo(event) {
       event.preventDefault();
 
+      const cityValue = cityTextInput.value.trim() || citySelect.value.trim();
+
+      if (!countrySelect.value.trim()) {
+        setStatus('국가를 선택하세요.');
+        countrySelect.focus();
+        return;
+      }
+      if (!cityValue) {
+        setStatus('도시를 선택하거나 직접 입력하세요.');
+        cityTextInput.focus();
+        return;
+      }
+
+      // Preserve a custom city through reload by injecting/selecting it before save.
+      ensureOption(citySelect, cityValue);
+      citySelect.value = cityValue;
+
       const body = {
         country: countrySelect.value.trim(),
-        city: citySelect.value.trim(),
+        city: cityValue,
         maps_url: mapsUrlInput.value.trim(),
         address: addressInput.value.trim(),
         latitude: latitudeInput.value.trim(),
@@ -1821,7 +1920,12 @@
     }
 
     countrySelect.addEventListener('change', updateCityOptions);
-    citySelect.addEventListener('change', loadRegisteredList);
+    citySelect.addEventListener('change', () => {
+      if (!cityTextInput.value.trim()) {
+        cityTextInput.value = citySelect.value || '';
+      }
+      loadRegisteredList();
+    });
     parseMapsBtn.addEventListener('click', parseGoogleMapsLink);
     fillFromGoogleBtn.addEventListener('click', autofillByGooglePlaces);
     selectAllGoogleBtn.addEventListener('click', () => {
@@ -1865,6 +1969,7 @@
       });
     });
     tripPickerFeedGrid.addEventListener('click', handleTripPickerFeedClick);
+    tripPickerSelectAllCheckbox.addEventListener('change', handleTripPickerSelectAllChange);
     tripPickerSaveLocationBtn.addEventListener('click', () => {
       saveSelectedTripPickerToLocationInfo().catch((error) => {
         console.error(error);
@@ -1881,7 +1986,10 @@
         runTripPickerParseBtn.disabled = false;
       });
     });
-    loadComboOptions();
+    
+    // 초기 데이터 사용해서 등록 리스트 로드
+    setStatus('콤보 데이터를 불러왔습니다. 등록 리스트를 확인하고 추가하세요.');
+    loadRegisteredList();
   </script>
 </body>
 </html>

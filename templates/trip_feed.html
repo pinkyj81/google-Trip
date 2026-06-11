@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>여행 피드</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
   <style>
     *,
     *::before,
@@ -37,19 +43,8 @@
       margin: 0;
       font-size: 28px;
       color: #0f4f8a;
-    }
-    .desc {
-      margin: 8px 0 0;
-      color: #2f628e;
-      font-size: 14px;
-    }
-    .top-row {
-      margin-top: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+      display: inline-block;
+      margin-right: 12px;
     }
     .page-link {
       display: inline-flex;
@@ -63,8 +58,17 @@
       background: #e9f2ff;
       border: 1px solid #bcd8f5;
     }
+    button.page-link {
+      box-shadow: none;
+      cursor: pointer;
+    }
     .page-link:hover {
       background: #dfeeff;
+    }
+    .desc {
+      margin: 8px 0 0;
+      color: #2f628e;
+      font-size: 14px;
     }
     .combo-grid {
       margin-top: 16px;
@@ -88,27 +92,33 @@
       color: #1f4e7f;
       font-family: inherit;
     }
-    .feed-wrap {
+    .content-split {
       margin-top: 16px;
-      border: 1px solid #cfe1f4;
-      border-radius: 14px;
-      background: #fafdff;
-      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(300px, 42%) minmax(0, 1fr);
+      gap: 16px;
+    }
+    .feed-wrap {
+      display: flex;
+      flex-direction: column;
     }
     .feed-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 11px 12px;
-      background: linear-gradient(135deg, #edf6ff 0%, #e4f0ff 100%);
-      border-bottom: 1px solid #cfe1f4;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #edf5ff;
+      border: 1px solid #cfe1f4;
+      border-radius: 12px 12px 0 0;
       color: #205689;
       font-weight: 700;
+      flex-shrink: 0;
     }
     .feed-head-left {
       display: inline-flex;
-      gap: 8px;
       align-items: baseline;
+      gap: 8px;
       flex-wrap: wrap;
     }
     .feed-hint {
@@ -116,136 +126,154 @@
       font-weight: 600;
       color: #4f7ea8;
     }
+    .feed-carousel-shell {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 60px;
+      min-height: 450px;
+      background: #fafdff;
+      border: 1px solid #cfe1f4;
+      border-top: 0;
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+    }
     .feed-grid {
-      padding: 12px;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
     }
     .feed-empty {
-      grid-column: 1 / -1;
-      border: 1px dashed #bdd6f2;
-      border-radius: 12px;
-      padding: 20px 14px;
+      color: #5a7ea1;
+      font-size: 15px;
       text-align: center;
-      color: #567fa5;
-      background: #f6fbff;
+    }
+    .feed-nav-btn {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(238, 246, 255, 0.95);
+      color: #1f5fb5;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: background 0.2s;
+    }
+    .feed-nav-btn:hover:not(:disabled) {
+      background: #dfeeff;
+    }
+    .feed-nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .feed-nav-btn.prev {
+      left: 12px;
+    }
+    .feed-nav-btn.next {
+      right: 12px;
     }
     .post-card {
-      border: 1px solid #d6e7f9;
-      border-radius: 14px;
+      width: min(100%, 420px);
+      max-width: 100%;
       background: #fff;
+      border: 1px solid #d4e3f0;
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 8px 20px rgba(24, 93, 158, 0.12);
       cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
     }
     .post-card:hover {
-      box-shadow: 0 10px 24px rgba(24, 93, 158, 0.2);
+      transform: scale(1.02);
+      box-shadow: 0 12px 24px rgba(31, 95, 181, 0.18);
     }
-    .post-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      border-bottom: 1px solid #e8f1fb;
-      background: #f9fcff;
-    }
-    .post-header-left {
-      min-width: 0;
-    }
-    .post-city {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 800;
-      color: #194f80;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .post-country {
-      margin: 2px 0 0;
-      font-size: 12px;
-      color: #4f7ea8;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .post-badge {
-      flex-shrink: 0;
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 11px;
-      font-weight: 800;
-      color: #145690;
-      border: 1px solid #bfdbf6;
-      background: #e7f2ff;
+    .post-card:active {
+      transform: scale(0.98);
     }
     .post-image {
       width: 100%;
-      aspect-ratio: 4 / 3;
+      height: 320px;
       object-fit: cover;
-      display: block;
-      background: linear-gradient(145deg, #e8f3ff 0%, #d6e7fb 100%);
+      background: #f0f5fa;
     }
-    .post-body {
-      padding: 10px 12px 12px;
+    .post-content {
+      padding: 16px;
     }
     .post-title {
-      margin: 0;
-      font-size: 16px;
+      margin: 0 0 6px;
+      font-size: 18px;
       font-weight: 800;
       color: #1e5488;
       line-height: 1.35;
       word-break: keep-all;
     }
-    .post-detail {
+    .post-category {
+      display: inline-block;
+      margin: 8px 0 0;
+      padding: 4px 8px;
+      background: #dfeeff;
+      color: #1f5fb5;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .post-address {
       margin: 8px 0 0;
       font-size: 13px;
-      line-height: 1.45;
       color: #38648d;
+      line-height: 1.4;
       word-break: keep-all;
-      min-height: 38px;
-    }
-    .post-meta {
-      margin: 8px 0 0;
-      font-size: 12px;
-      color: #5c84aa;
-      line-height: 1.35;
-      word-break: break-word;
     }
     .post-actions {
-      margin-top: 10px;
+      margin-top: 12px;
       display: flex;
       justify-content: flex-end;
       gap: 8px;
     }
-    .post-link {
-      text-decoration: none;
+    .post-action-btn {
       border-radius: 8px;
-      padding: 6px 9px;
+      padding: 6px 10px;
       font-size: 12px;
       font-weight: 700;
-      color: #175993;
-      border: 1px solid #c5ddf6;
-      background: #eff6ff;
+      box-shadow: none;
+      cursor: pointer;
+      border: 0;
     }
-    .post-link:hover {
-      background: #e4f0ff;
+    .post-heart-btn {
+      border: 1px solid #bcd8f5;
+      background: #f2f7ff;
+      color: #4e6f9a;
     }
-    .status {
-      margin-top: 14px;
-      padding: 10px 12px;
+    .post-heart-btn.active {
+      border-color: #8f73db;
+      background: #efe9ff;
+      color: #6a46cb;
+    }
+    .map-wrap {
       border: 1px solid #cfe1f4;
-      border-radius: 10px;
+      border-radius: 12px;
       background: #f7fbff;
-      color: #2f628e;
-      font-size: 14px;
+      overflow: hidden;
+      min-height: 600px;
+      display: flex;
+    }
+    .map-canvas {
+      flex: 1;
+      min-height: 100%;
     }
     .edit-modal {
       position: fixed;
       inset: 0;
-      z-index: 1200;
+      z-index: 1100;
       display: grid;
       place-items: center;
       padding: 16px;
@@ -256,36 +284,30 @@
     .edit-modal-backdrop {
       position: absolute;
       inset: 0;
-      background: rgba(17, 47, 80, 0.42);
+      background: rgba(17, 47, 80, 0.4);
       backdrop-filter: blur(2px);
     }
     .edit-modal-panel {
       position: relative;
-      width: min(760px, 100%);
+      width: min(680px, 100%);
       max-height: calc(100vh - 32px);
       border: 1px solid #bcd8f5;
       border-radius: 18px;
       background: rgba(247, 251, 255, 0.98);
       box-shadow: 0 16px 36px rgba(22, 74, 125, 0.24);
-      padding: 14px;
+      padding: 20px;
       overflow: auto;
     }
     .edit-modal-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
     }
     .edit-modal-title {
       margin: 0;
+      font-size: 28px;
       color: #1f5a95;
-      font-size: 24px;
-    }
-    .edit-modal-actions {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
     }
     .edit-close-btn {
       width: 40px;
@@ -298,24 +320,25 @@
       background: #e6f0ff;
       box-shadow: none;
       line-height: 1;
+      cursor: pointer;
     }
     .edit-grid {
       display: grid;
-      gap: 10px;
+      gap: 12px;
     }
     .edit-grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
     }
     .edit-grid-3 {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
     }
-    .edit-grid textarea,
     .edit-grid input,
-    .edit-grid select {
+    .edit-grid select,
+    .edit-grid textarea {
       width: 100%;
       border: 1px solid #bcd8f5;
       border-radius: 10px;
@@ -336,16 +359,102 @@
     }
 
     @media (max-width: 700px) {
+      .content-split {
+        grid-template-columns: 1fr;
+      }
       .combo-grid {
         grid-template-columns: 1fr;
       }
       .feed-grid {
-        grid-template-columns: 1fr;
+        padding: 0;
+      }
+      .feed-carousel-shell {
+        padding: 12px 34px;
+      }
+      .feed-nav-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 24px;
+      }
+      .feed-nav-btn.prev {
+        left: 6px;
+      }
+      .feed-nav-btn.next {
+        right: 6px;
+      }
+      .post-card {
+        width: min(86vw, 320px);
+        flex-basis: min(86vw, 320px);
       }
       .edit-grid-2,
       .edit-grid-3 {
         grid-template-columns: 1fr;
       }
+    }
+    .modal-popup {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .modal-popup[hidden] {
+      display: none;
+    }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17, 47, 80, 0.4);
+      backdrop-filter: blur(2px);
+    }
+    .modal-panel {
+      position: relative;
+      width: min(760px, 100%);
+      max-height: calc(100vh - 32px);
+      border: 1px solid #bcd8f5;
+      border-radius: 18px;
+      background: rgba(247, 251, 255, 0.98);
+      box-shadow: 0 16px 36px rgba(22, 74, 125, 0.24);
+      padding: 16px;
+      overflow: auto;
+    }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .modal-title {
+      margin: 0;
+      font-size: 32px;
+      color: #1f5a95;
+      line-height: 1;
+    }
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .modal-close {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      padding: 0;
+      font-size: 24px;
+      color: #2f628e;
+      border: 1px solid #a9c7e8;
+      background: #e6f0ff;
+      box-shadow: none;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .modal-note {
+      margin-top: 10px;
+      color: #426f98;
+      font-size: 17px;
     }
   </style>
 </head>
@@ -353,18 +462,17 @@
   <main class="wrap">
     <section class="card">
       <h1>여행 피드</h1>
-      <p class="desc">저장된 여행 정보를 인스타 스타일로 확인합니다.</p>
-
-      <div class="top-row">
-        <div></div>
-        <a class="page-link" href="/trip-info">여행 정보 입력하기</a>
-      </div>
+      <button id="feedOpenPickerBtn" type="button" class="page-link">장소등록 팝업 열기</button>
+      <a class="page-link" href="/trip-info">여행 정보 입력하기</a>
 
       <div class="combo-grid">
         <div>
           <label for="feedCountry">국가 선택</label>
           <select id="feedCountry" required>
             <option value="">국가를 선택하세요</option>
+            {% for country in initial_data.countries %}
+            <option value="{{ country }}">{{ country }}</option>
+            {% endfor %}
           </select>
         </div>
         <div>
@@ -375,29 +483,38 @@
         </div>
       </div>
 
-      <div class="feed-wrap">
-        <div class="feed-head">
-          <span class="feed-head-left">
-            <span>인스타 스타일 피드</span>
-            <span class="feed-hint">카드 더블클릭으로 수정</span>
-          </span>
-          <span id="feedSummary">0개 포스트</span>
+      <div class="content-split">
+        <div class="feed-wrap">
+          <div class="feed-head">
+            <span class="feed-head-left">
+              <span>주요 관광지</span>
+              <span class="feed-hint">화살표로 한 칸씩 이동, 카드 더블클릭으로 수정</span>
+            </span>
+            <span id="feedSummary">0/0</span>
+          </div>
+          <div class="feed-carousel-shell">
+            <button id="feedPrevBtn" class="feed-nav-btn prev" type="button" aria-label="이전 포스트">‹</button>
+            <div id="tripFeed" class="feed-grid">
+              <div class="feed-empty">국가와 도시를 선택하면 여행 포스트가 표시됩니다.</div>
+            </div>
+            <button id="feedNextBtn" class="feed-nav-btn next" type="button" aria-label="다음 포스트">›</button>
+          </div>
         </div>
-        <div id="tripFeed" class="feed-grid">
-          <div class="feed-empty">국가와 도시를 선택하면 여행 포스트가 표시됩니다.</div>
+        <div class="map-wrap">
+          <div id="feedMap" class="map-canvas" role="region" aria-label="여행 피드 지도"></div>
         </div>
       </div>
 
-      <div id="feedStatus" class="status">콤보 데이터를 불러오는 중...</div>
+      <p id="feedMapSummary" style="margin-top: 12px; color: #2f628e; font-size: 14px;"></p>
     </section>
   </main>
 
   <section id="feedEditModal" class="edit-modal" hidden>
-    <div id="feedEditBackdrop" class="edit-modal-backdrop"></div>
+    <div id="feedEditModalBackdrop" class="edit-modal-backdrop"></div>
     <div class="edit-modal-panel">
       <div class="edit-modal-head">
-        <p id="feedEditTitle" class="edit-modal-title">포스트 수정</p>
-        <div class="edit-modal-actions">
+        <p class="edit-modal-title">여행 포스트 수정</p>
+        <div style="display: flex; gap: 8px;">
           <button id="feedEditSaveBtn" type="button">저장</button>
           <button id="feedEditCloseBtn" type="button" class="edit-close-btn" aria-label="닫기">×</button>
         </div>
@@ -414,21 +531,19 @@
             <select id="feedEditCategory">
               <option value="">구분 선택</option>
               <option value="랜드마크">랜드마크</option>
-              <option value="관광지">관광지</option>
-              <option value="맛집">맛집</option>
-              <option value="카페">카페</option>
+              <option value="박물관">박물관</option>
+              <option value="음식점">음식점</option>
               <option value="숙소">숙소</option>
-              <option value="쇼핑">쇼핑</option>
-              <option value="기타">기타</option>
+              <option value="공원">공원</option>
             </select>
           </div>
           <div>
             <label for="feedEditLatitude">위도</label>
-            <input id="feedEditLatitude" placeholder="예: 37.5665" />
+            <input id="feedEditLatitude" type="number" step="0.0001" />
           </div>
           <div>
             <label for="feedEditLongitude">경도</label>
-            <input id="feedEditLongitude" placeholder="예: 126.9780" />
+            <input id="feedEditLongitude" type="number" step="0.0001" />
           </div>
         </div>
         <div>
@@ -436,11 +551,7 @@
           <input id="feedEditAddress" />
         </div>
         <div>
-          <label for="feedEditMapsUrl">구글맵 링크</label>
-          <input id="feedEditMapsUrl" placeholder="https://maps.google.com/..." />
-        </div>
-        <div>
-          <label for="feedEditImageUrl">이미지 경로</label>
+          <label for="feedEditImageUrl">이미지 URL</label>
           <input id="feedEditImageUrl" />
         </div>
         <div>
@@ -451,32 +562,197 @@
     </div>
   </section>
 
+  <section id="feedPickerModal" class="modal-popup" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel">
+      <div class="modal-head">
+        <p class="modal-title">여행 장소등록</p>
+        <div class="modal-actions">
+          <button id="feedPickerSaveBtn" type="button" class="page-link" style="box-shadow: none;">저장</button>
+          <button id="feedPickerCloseBtn" type="button" class="modal-close" aria-label="닫기">×</button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;">
+        <button id="feedPickerParseBtn" type="button" class="page-link" style="display: inline-flex; padding: 10px 16px; text-decoration: none; border-radius: 10px; border: 0;">파싱하기</button>
+        <button id="feedPickerGoogleBtn" type="button" class="page-link" style="display: inline-flex; padding: 10px 16px; text-decoration: none; border-radius: 10px; border: 0;">구글API</button>
+      </div>
+      <p id="feedPickerNote" class="modal-note">시작 방식을 선택하세요.</p>
+      <div id="feedPickerGoogleSection" style="display: none; border: 1px solid #bcd8f5; border-radius: 12px; padding: 12px; background: rgba(240, 247, 255, 0.65);">
+        <div class="edit-grid-3">
+          <div>
+            <label for="feedPickerGoogleCountry">국가 선택</label>
+            <select id="feedPickerGoogleCountry">
+              <option value="">국가를 선택하세요</option>
+              <option value="KR">대한민국 (KR)</option>
+              <option value="US">미국 (US)</option>
+              <option value="GB">영국 (GB)</option>
+              <option value="FR">프랑스 (FR)</option>
+              <option value="JP">일본 (JP)</option>
+              <option value="IT">이탈리아 (IT)</option>
+              <option value="ES">스페인 (ES)</option>
+              <option value="DE">독일 (DE)</option>
+              <option value="CZ">체코 (CZ)</option>
+              <option value="HU">헝가리 (HU)</option>
+              <option value="PL">폴란드 (PL)</option>
+              <option value="TR">터키 (TR)</option>
+              <option value="SG">싱가포르 (SG)</option>
+              <option value="MY">말레이시아 (MY)</option>
+              <option value="HK">홍콩 (HK)</option>
+              <option value="MO">마카오 (MO)</option>
+              <option value="CN">중국 (CN)</option>
+            </select>
+          </div>
+          <div>
+            <label for="feedPickerGoogleCountryCustom">국가 직접 입력</label>
+            <input id="feedPickerGoogleCountryCustom" placeholder="예: 그리스" />
+          </div>
+          <div>
+            <label for="feedPickerGoogleCountryCodeCustom">국가코드 직접 입력</label>
+            <input id="feedPickerGoogleCountryCodeCustom" placeholder="예: GR" maxlength="2" />
+          </div>
+          <div>
+            <label for="feedPickerGoogleCity">도시 선택</label>
+            <select id="feedPickerGoogleCity">
+              <option value="">도시를 선택하세요</option>
+            </select>
+          </div>
+          <div>
+            <label for="feedPickerGoogleCityCustom">도시 직접 입력</label>
+            <input id="feedPickerGoogleCityCustom" placeholder="예: 샌프란시스코" />
+          </div>
+          <div>
+            <label for="feedPickerGoogleCategory">카테고리 선택</label>
+            <select id="feedPickerGoogleCategory">
+              <option value="">카테고리를 선택하세요</option>
+              <option value="tourist_attraction">관광명소</option>
+              <option value="historical_landmark">랜드마크</option>
+              <option value="museum">박물관</option>
+              <option value="park">공원</option>
+              <option value="lodging">호텔/숙소</option>
+              <option value="restaurant">식당</option>
+              <option value="cafe">카페</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+          <button id="runFeedPickerGoogleSearchBtn" type="button" class="page-link" style="border: 0;">검색</button>
+        </div>
+
+        <div style="margin-top: 10px; border: 1px solid #bcd8f5; border-radius: 12px; overflow: hidden;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #e8f2ff; color: #215689; font-weight: 700;">
+            <span>검색 피드</span>
+            <div style="display: inline-flex; align-items: center; gap: 10px;">
+              <label for="feedPickerSelectAllCheckbox" style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin: 0; font-weight: 700; cursor: pointer;">
+                <input id="feedPickerSelectAllCheckbox" type="checkbox" />
+                전체 선택
+              </label>
+              <span id="feedPickerFeedSummary">0건</span>
+            </div>
+          </div>
+          <div id="feedPickerFeedGrid" style="padding: 12px; display: grid; gap: 10px; max-height: 280px; overflow: auto; background: rgba(250, 253, 255, 0.8);">
+            <div style="border: 1px dashed #a8c8ee; border-radius: 12px; color: #5278a1; padding: 16px; text-align: center;">검색 결과가 여기에 표시됩니다.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
-    const countrySelect = document.getElementById('feedCountry');
-    const citySelect = document.getElementById('feedCity');
-    const feedEl = document.getElementById('tripFeed');
-    const feedSummaryEl = document.getElementById('feedSummary');
-    const statusEl = document.getElementById('feedStatus');
-    const feedEditModal = document.getElementById('feedEditModal');
-    const feedEditBackdrop = document.getElementById('feedEditBackdrop');
-    const feedEditCloseBtn = document.getElementById('feedEditCloseBtn');
-    const feedEditSaveBtn = document.getElementById('feedEditSaveBtn');
-    const feedEditTitle = document.getElementById('feedEditTitle');
-    const feedEditAttraction = document.getElementById('feedEditAttraction');
-    const feedEditCategory = document.getElementById('feedEditCategory');
-    const feedEditAddress = document.getElementById('feedEditAddress');
-    const feedEditLatitude = document.getElementById('feedEditLatitude');
-    const feedEditLongitude = document.getElementById('feedEditLongitude');
-    const feedEditMapsUrl = document.getElementById('feedEditMapsUrl');
-    const feedEditImageUrl = document.getElementById('feedEditImageUrl');
-    const feedEditDetail = document.getElementById('feedEditDetail');
+    // 모달 팝업 제어
+    const feedOpenPickerBtn = document.getElementById('feedOpenPickerBtn');
+    const feedPickerModal = document.getElementById('feedPickerModal');
+    const feedPickerCloseBtn = document.getElementById('feedPickerCloseBtn');
+    const feedPickerBackdrop = feedPickerModal.querySelector('.modal-backdrop');
+    const feedPickerSaveBtnEl = document.getElementById('feedPickerSaveBtn');
+    const feedPickerParseBtnEl = document.getElementById('feedPickerParseBtn');
+    const feedPickerGoogleBtnEl = document.getElementById('feedPickerGoogleBtn');
+    const feedPickerNoteEl = document.getElementById('feedPickerNote');
+    const feedPickerGoogleSectionEl = document.getElementById('feedPickerGoogleSection');
+    const feedPickerGoogleCountryEl = document.getElementById('feedPickerGoogleCountry');
+    const feedPickerGoogleCountryCustomEl = document.getElementById('feedPickerGoogleCountryCustom');
+    const feedPickerGoogleCountryCodeCustomEl = document.getElementById('feedPickerGoogleCountryCodeCustom');
+    const feedPickerGoogleCityEl = document.getElementById('feedPickerGoogleCity');
+    const feedPickerGoogleCityCustomEl = document.getElementById('feedPickerGoogleCityCustom');
+    const feedPickerGoogleCategoryEl = document.getElementById('feedPickerGoogleCategory');
+    const runFeedPickerGoogleSearchBtnEl = document.getElementById('runFeedPickerGoogleSearchBtn');
+    const feedPickerSelectAllCheckboxEl = document.getElementById('feedPickerSelectAllCheckbox');
+    const feedPickerFeedSummaryEl = document.getElementById('feedPickerFeedSummary');
+    const feedPickerFeedGridEl = document.getElementById('feedPickerFeedGrid');
 
-    let cityOptions = {};
-    let currentFeedItems = [];
-    let editingItemId = null;
+    const FEED_PICKER_CITY_OPTIONS = {
+      KR: ['서울', '부산', '인천'],
+      US: ['보스턴', '뉴욕', '로스앤젤레스'],
+      GB: ['런던'],
+      FR: ['파리'],
+      JP: ['도쿄', '오사카'],
+      IT: ['로마'],
+      ES: ['바르셀로나'],
+      DE: ['베를린'],
+      CZ: ['프라하'],
+      HU: ['부다페스트'],
+      PL: ['바르샤바'],
+      TR: ['이스탄불'],
+      SG: ['싱가포르'],
+      MY: ['쿠알라룸푸르'],
+      HK: ['홍콩'],
+      MO: ['마카오'],
+      CN: ['상해'],
+    };
 
-    function setStatus(text) {
-      statusEl.textContent = text;
+    let feedPickerPlaces = [];
+    const selectedFeedPickerIndexes = new Set();
+
+    function updateFeedPickerGoogleCities() {
+      const code = feedPickerGoogleCountryEl.value || '';
+      const cities = FEED_PICKER_CITY_OPTIONS[code] || [];
+      const previous = feedPickerGoogleCityEl.value;
+      feedPickerGoogleCityEl.innerHTML = '<option value="">도시를 선택하세요</option>';
+      cities.forEach((city) => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        feedPickerGoogleCityEl.appendChild(opt);
+      });
+      if (cities.includes(previous)) {
+        feedPickerGoogleCityEl.value = previous;
+      }
+    }
+
+    function getFeedPickerCategoryKeyword(categoryValue) {
+      const categoryKeywordMap = {
+        tourist_attraction: '관광 명소',
+        historical_landmark: '랜드마크',
+        lodging: '호텔',
+        restaurant: '레스토랑',
+        cafe: '카페',
+        museum: '박물관',
+        park: '공원',
+      };
+      return categoryKeywordMap[String(categoryValue || '').trim().toLowerCase()] || '관광 명소';
+    }
+
+    function mapFeedPickerCategoryToLocation(categoryValue) {
+      const categoryMap = {
+        tourist_attraction: '관광지',
+        historical_landmark: '랜드마크',
+        museum: '관광지',
+        park: '관광지',
+        lodging: '숙소',
+        restaurant: '맛집',
+        cafe: '카페',
+      };
+      return categoryMap[String(categoryValue || '').trim().toLowerCase()] || '기타';
+    }
+
+    function getFeedPickerPlaceName(place) {
+      if (!place) {
+        return '';
+      }
+      if (typeof place.displayName === 'object') {
+        return String(place.displayName?.text || '').trim();
+      }
+      return String(place.displayName || '').trim();
     }
 
     function escapeHtml(value) {
@@ -488,227 +764,607 @@
         .replaceAll("'", '&#39;');
     }
 
-    function buildMapsUrl(item) {
-      const direct = String(item.maps_url || '').trim();
-      if (direct) {
-        return direct;
+    function syncFeedPickerSelectAllCheckbox() {
+      const totalCount = Array.isArray(feedPickerPlaces) ? feedPickerPlaces.length : 0;
+      if (totalCount === 0) {
+        feedPickerSelectAllCheckboxEl.checked = false;
+        feedPickerSelectAllCheckboxEl.indeterminate = false;
+        feedPickerSelectAllCheckboxEl.disabled = true;
+        return;
       }
 
-      if (item.latitude != null && item.longitude != null) {
-        return `https://www.google.com/maps?q=${encodeURIComponent(`${item.latitude},${item.longitude}`)}`;
-      }
-
-      const query = String(item.address || item.attraction || '').trim();
-      if (query) {
-        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-      }
-
-      return '';
+      const selectedCount = selectedFeedPickerIndexes.size;
+      feedPickerSelectAllCheckboxEl.disabled = false;
+      feedPickerSelectAllCheckboxEl.checked = selectedCount === totalCount;
+      feedPickerSelectAllCheckboxEl.indeterminate = selectedCount > 0 && selectedCount < totalCount;
     }
 
-    function openEditModal(item) {
-      if (!item || !item.id) {
+    function renderFeedPickerFeed() {
+      if (!Array.isArray(feedPickerPlaces) || !feedPickerPlaces.length) {
+        feedPickerFeedGridEl.innerHTML = '<div style="border: 1px dashed #a8c8ee; border-radius: 12px; color: #5278a1; padding: 16px; text-align: center;">검색 결과가 여기에 표시됩니다.</div>';
+        feedPickerFeedSummaryEl.textContent = '0건';
+        syncFeedPickerSelectAllCheckbox();
         return;
       }
 
-      editingItemId = Number(item.id);
-      feedEditTitle.textContent = `포스트 수정 (ID: ${editingItemId})`;
-      feedEditAttraction.value = String(item.attraction || '');
-      feedEditCategory.value = String(item.category || '');
-      feedEditAddress.value = String(item.address || '');
-      feedEditLatitude.value = item.latitude == null ? '' : String(item.latitude);
-      feedEditLongitude.value = item.longitude == null ? '' : String(item.longitude);
-      feedEditMapsUrl.value = String(item.maps_url || '');
-      feedEditImageUrl.value = String(item.image_url || '');
-      feedEditDetail.value = String(item.detail || '');
-      feedEditModal.hidden = false;
-    }
-
-    function closeEditModal() {
-      feedEditModal.hidden = true;
-      editingItemId = null;
-    }
-
-    async function saveEditModal() {
-      if (!editingItemId) {
-        return;
-      }
-
-      const current = currentFeedItems.find((entry) => Number(entry.id) === Number(editingItemId));
-      if (!current) {
-        setStatus('수정할 원본 데이터를 찾지 못했습니다. 목록을 다시 불러옵니다.');
-        await loadFeedItems();
-        closeEditModal();
-        return;
-      }
-
-      const body = {
-        country: String(current.country || '').trim(),
-        city: String(current.city || '').trim(),
-        attraction: feedEditAttraction.value.trim(),
-        detail: feedEditDetail.value.trim(),
-        image_url: feedEditImageUrl.value.trim(),
-        maps_url: feedEditMapsUrl.value.trim(),
-        address: feedEditAddress.value.trim(),
-        latitude: feedEditLatitude.value.trim(),
-        longitude: feedEditLongitude.value.trim(),
-        category: feedEditCategory.value.trim(),
-      };
-
-      if (!body.attraction) {
-        setStatus('관광지명은 비워둘 수 없습니다.');
-        feedEditAttraction.focus();
-        return;
-      }
-
-      feedEditSaveBtn.disabled = true;
-      setStatus('수정 저장 중...');
-      try {
-        const res = await fetch(`/api/location-info/${editingItemId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const payload = await res.json();
-        if (!res.ok) {
-          throw new Error(payload.error || '수정 실패');
-        }
-
-        closeEditModal();
-        await loadFeedItems();
-        setStatus(`수정 완료 (ID: ${payload.id ?? editingItemId})`);
-      } catch (error) {
-        console.error(error);
-        setStatus(`수정 실패: ${error.message}`);
-      } finally {
-        feedEditSaveBtn.disabled = false;
-      }
-    }
-
-    function renderFeed(items) {
-      currentFeedItems = Array.isArray(items) ? items : [];
-      if (!Array.isArray(items) || items.length === 0) {
-        feedEl.innerHTML = '<div class="feed-empty">선택한 국가/도시에 해당하는 여행 포스트가 없습니다.</div>';
-        feedSummaryEl.textContent = '0개 포스트';
-        return;
-      }
-
-      const cards = items.map((item) => {
-        const title = escapeHtml(item.attraction || '이름 없는 장소');
-        const country = escapeHtml(item.country || '국가 미상');
-        const city = escapeHtml(item.city || '도시 미상');
-        const category = escapeHtml(item.category || '기타');
-        const detail = escapeHtml(item.detail || '상세 설명이 아직 등록되지 않았습니다.');
-        const address = escapeHtml(item.address || '주소 정보 없음');
-        const imageUrl = String(item.image_url || '').trim();
-        const mapsUrl = buildMapsUrl(item);
-        const imageHtml = imageUrl
-          ? `<img class="post-image" src="${escapeHtml(imageUrl)}" alt="${title}" onerror="this.style.display='none'" />`
-          : '<div class="post-image"></div>';
-        const mapsHtml = mapsUrl
-          ? `<a class="post-link" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">지도 보기</a>`
-          : '';
+      const cards = feedPickerPlaces.map((place, index) => {
+        const selected = selectedFeedPickerIndexes.has(index);
+        const name = escapeHtml(getFeedPickerPlaceName(place) || '이름 없음');
+        const address = escapeHtml(place.formattedAddress || '-');
+        const photoUrl = place.photoUrl ? escapeHtml(place.photoUrl) : '';
+        const btnText = selected ? '선택됨' : '선택';
+        const btnStyle = selected
+          ? 'background:#2b6ec7;color:#fff;border:0;'
+          : 'background:#e9f2ff;color:#1f5fb5;border:1px solid #bcd8f5;';
 
         return `
-          <article class="post-card" data-id="${escapeHtml(item.id ?? '')}">
-            <div class="post-header">
-              <div class="post-header-left">
-                <p class="post-city">${city}</p>
-                <p class="post-country">${country}</p>
+          <article style="display:grid;grid-template-columns:100px 1fr;gap:10px;border:1px solid #cfe1f4;border-radius:10px;padding:10px;background:#fff;">
+            ${photoUrl ? `<img src="${photoUrl}" alt="${name}" style="width:100px;height:74px;object-fit:cover;border-radius:8px;background:#f0f5fa;" />` : '<div style="width:100px;height:74px;border-radius:8px;background:#eef4fb;"></div>'}
+            <div>
+              <p style="margin:0;font-weight:800;color:#1e5488;">${name}</p>
+              <p style="margin:6px 0 0;color:#38648d;font-size:13px;">${address}</p>
+              <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+                <button type="button" data-feed-picker-index="${index}" style="border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;${btnStyle}">${btnText}</button>
               </div>
-              <span class="post-badge">${category}</span>
-            </div>
-            ${imageHtml}
-            <div class="post-body">
-              <p class="post-title">${title}</p>
-              <p class="post-detail">${detail}</p>
-              <p class="post-meta">${address}</p>
-              <div class="post-actions">${mapsHtml}</div>
             </div>
           </article>
         `;
       });
 
-      feedEl.innerHTML = cards.join('');
-      feedSummaryEl.textContent = `${items.length}개 포스트`;
+      feedPickerFeedGridEl.innerHTML = cards.join('');
+      feedPickerFeedSummaryEl.textContent = `${feedPickerPlaces.length}건`;
+      syncFeedPickerSelectAllCheckbox();
     }
 
-    async function loadFeedItems() {
-      const country = countrySelect.value;
-      const city = citySelect.value;
-
-      if (!country) {
-        feedEl.innerHTML = '<div class="feed-empty">국가를 선택하면 여행 포스트를 보여드립니다.</div>';
-        feedSummaryEl.textContent = '0개 포스트';
+    async function runFeedPickerGoogleSearch() {
+      const selectedCountryCode = feedPickerGoogleCountryEl.value.trim().toUpperCase();
+      const customCountryName = feedPickerGoogleCountryCustomEl.value.trim();
+      const customCountryCode = feedPickerGoogleCountryCodeCustomEl.value.trim().toUpperCase();
+      const countryCodeRaw = customCountryCode || selectedCountryCode;
+      const countryCode = /^[A-Z]{2}$/.test(countryCodeRaw) ? countryCodeRaw : '';
+      const city = (feedPickerGoogleCityCustomEl.value || feedPickerGoogleCityEl.value || '').trim();
+      const category = feedPickerGoogleCategoryEl.value.trim();
+      if ((!countryCode && !customCountryName) || !city || !category) {
+        feedPickerNoteEl.textContent = '국가(선택/직접입력), 도시(선택/직접입력), 카테고리를 모두 지정하세요.';
         return;
       }
 
-      const params = new URLSearchParams({ country });
-      if (city) {
-        params.set('city', city);
-      }
-      const url = `/api/location-info/list?${params.toString()}`;
-      feedEl.innerHTML = '<div class="feed-empty">포스트를 불러오는 중...</div>';
+      const keyword = getFeedPickerCategoryKeyword(category);
+      feedPickerNoteEl.textContent = 'Google API 검색 중...';
+      runFeedPickerGoogleSearchBtnEl.disabled = true;
 
       try {
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) {
-          throw new Error(`목록 조회 실패: ${res.status}`);
-        }
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `${city} ${customCountryName || ''} ${keyword}`.trim(),
+            search_type: 'text',
+            country_code: countryCode,
+            place_category: category,
+            max_pages: 1,
+          }),
+        });
 
         const payload = await res.json();
-        renderFeed(payload.items || []);
-        setStatus(city ? `조회 완료: ${country} / ${city}` : `조회 완료: ${country} (전체 도시)`);
+        if (!res.ok) {
+          throw new Error(payload.error || 'Google 검색 실패');
+        }
+
+        feedPickerPlaces = Array.isArray(payload.places) ? payload.places : [];
+        selectedFeedPickerIndexes.clear();
+        renderFeedPickerFeed();
+        feedPickerNoteEl.textContent = feedPickerPlaces.length
+          ? `검색 결과 ${feedPickerPlaces.length}건. 저장 버튼으로 선택 항목을 등록하세요.`
+          : '검색 결과가 없습니다.';
       } catch (error) {
         console.error(error);
-        feedEl.innerHTML = '<div class="feed-empty">포스트 조회에 실패했습니다.</div>';
-        feedSummaryEl.textContent = '-';
-        setStatus(`포스트 조회 실패: ${error.message}`);
+        feedPickerNoteEl.textContent = `Google 검색 실패: ${error.message}`;
+      } finally {
+        runFeedPickerGoogleSearchBtnEl.disabled = false;
       }
     }
 
-    function updateCityOptions() {
-      const country = countrySelect.value || '';
-      const cities = cityOptions[country] || [];
-      const prevCity = citySelect.value;
+    function handleFeedPickerFeedClick(event) {
+      const btn = event.target.closest('button[data-feed-picker-index]');
+      if (!btn) {
+        return;
+      }
 
-      citySelect.innerHTML = '<option value="">도시를 선택하세요</option>';
+      const index = Number(btn.getAttribute('data-feed-picker-index'));
+      if (!Number.isFinite(index)) {
+        return;
+      }
+
+      if (selectedFeedPickerIndexes.has(index)) {
+        selectedFeedPickerIndexes.delete(index);
+      } else {
+        selectedFeedPickerIndexes.add(index);
+      }
+      renderFeedPickerFeed();
+    }
+
+    function handleFeedPickerSelectAllChange(event) {
+      const checked = Boolean(event.target?.checked);
+      selectedFeedPickerIndexes.clear();
+      if (checked) {
+        feedPickerPlaces.forEach((_, index) => selectedFeedPickerIndexes.add(index));
+      }
+      renderFeedPickerFeed();
+    }
+
+    async function saveFeedPickerSelected() {
+      const selected = Array.from(selectedFeedPickerIndexes)
+        .map((idx) => feedPickerPlaces[idx])
+        .filter(Boolean);
+
+      if (!selected.length) {
+        feedPickerNoteEl.textContent = '저장할 장소를 먼저 선택하세요.';
+        return;
+      }
+
+      const selectedCountryOpt = feedPickerGoogleCountryEl.options[feedPickerGoogleCountryEl.selectedIndex];
+      const selectedCountryText = String(selectedCountryOpt?.textContent || '').trim().replace(/\s*\([A-Z]{2}\)\s*$/, '');
+      const countryText = feedPickerGoogleCountryCustomEl.value.trim() || selectedCountryText || feedPickerGoogleCountryCodeCustomEl.value.trim().toUpperCase();
+      const city = (feedPickerGoogleCityCustomEl.value || feedPickerGoogleCityEl.value || '').trim();
+      const category = mapFeedPickerCategoryToLocation(feedPickerGoogleCategoryEl.value);
+
+      if (!countryText || !city) {
+        feedPickerNoteEl.textContent = '국가와 도시(선택 또는 직접입력)를 지정한 뒤 저장하세요.';
+        return;
+      }
+
+      feedPickerSaveBtnEl.disabled = true;
+      feedPickerNoteEl.textContent = `선택 ${selected.length}건 저장 중...`;
+
+      let saved = 0;
+      let duplicated = 0;
+      try {
+        for (const place of selected) {
+          const payload = {
+            country: countryText,
+            city,
+            attraction: getFeedPickerPlaceName(place) || '이름 없음',
+            detail: '',
+            image_url: place.photoUrl || '',
+            maps_url: place.googleMapsUri || '',
+            address: place.formattedAddress || '',
+            latitude: place.latitude,
+            longitude: place.longitude,
+            category,
+          };
+
+          const res = await fetch('/api/location-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data.error || 'LocationInfo 저장 실패');
+          }
+          if (data.duplicate) {
+            duplicated += 1;
+          } else {
+            saved += 1;
+          }
+        }
+
+        feedPickerNoteEl.textContent = `LocationInfo 저장 완료: 신규 ${saved}건, 중복 ${duplicated}건`;
+        await loadComboOptions();
+        if (countryText) {
+          feedCountryEl.value = countryText;
+          updateCityOptions();
+        }
+        if (city) {
+          feedCityEl.value = city;
+        }
+        await loadFeedByLocation();
+      } catch (error) {
+        console.error(error);
+        feedPickerNoteEl.textContent = `저장 실패: ${error.message}`;
+      } finally {
+        feedPickerSaveBtnEl.disabled = false;
+      }
+    }
+
+    feedOpenPickerBtn.addEventListener('click', () => {
+      feedPickerGoogleSectionEl.style.display = 'none';
+      feedPickerPlaces = [];
+      selectedFeedPickerIndexes.clear();
+      renderFeedPickerFeed();
+      feedPickerNoteEl.textContent = '시작 방식을 선택하세요.';
+      feedPickerModal.hidden = false;
+    });
+
+    feedPickerCloseBtn.addEventListener('click', () => {
+      feedPickerModal.hidden = true;
+    });
+
+    feedPickerBackdrop.addEventListener('click', () => {
+      feedPickerModal.hidden = true;
+    });
+    feedPickerSaveBtnEl.addEventListener('click', saveFeedPickerSelected);
+    feedPickerParseBtnEl.addEventListener('click', () => {
+      feedPickerGoogleSectionEl.style.display = 'none';
+      feedPickerNoteEl.textContent = '파싱 기능은 준비 중입니다. 구글API를 선택하면 바로 검색할 수 있습니다.';
+    });
+    feedPickerGoogleBtnEl.addEventListener('click', () => {
+      feedPickerGoogleSectionEl.style.display = 'block';
+      if (!feedPickerGoogleCountryEl.value) {
+        feedPickerGoogleCountryEl.value = 'US';
+      }
+      if (!feedPickerGoogleCategoryEl.value) {
+        feedPickerGoogleCategoryEl.value = 'tourist_attraction';
+      }
+      updateFeedPickerGoogleCities();
+      feedPickerNoteEl.textContent = '국가/도시를 선택하거나 직접 입력한 뒤 검색을 누르세요.';
+    });
+    feedPickerGoogleCountryEl.addEventListener('change', updateFeedPickerGoogleCities);
+    runFeedPickerGoogleSearchBtnEl.addEventListener('click', runFeedPickerGoogleSearch);
+    feedPickerFeedGridEl.addEventListener('click', handleFeedPickerFeedClick);
+    feedPickerSelectAllCheckboxEl.addEventListener('change', handleFeedPickerSelectAllChange);
+
+    // 기존 trip_feed.js 코드 (원래 있던 모든 코드)
+    let currentFeedItems = [];
+    let currentFeedIndex = 0;
+    let editingItemId = null;
+    let feedMap = null;
+    let feedMarkersLayer = null;
+    let feedMarkersById = new Map();
+    let cityOptions = {{ initial_data.cities_by_country | tojson }} || {};
+
+    const markerIconDefault = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const markerIconActive = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const markerIconSelected = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    let lastActiveMarkerId = null;
+    const selectedHeartIds = new Set();
+
+    const feedCountryEl = document.getElementById('feedCountry');
+    const feedCityEl = document.getElementById('feedCity');
+    const tripFeedEl = document.getElementById('tripFeed');
+    const feedSummaryEl = document.getElementById('feedSummary');
+    const feedMapSummaryEl = document.getElementById('feedMapSummary');
+    const feedPrevBtn = document.getElementById('feedPrevBtn');
+    const feedNextBtn = document.getElementById('feedNextBtn');
+    const feedEditModalEl = document.getElementById('feedEditModal');
+    const feedEditModalBackdropEl = document.getElementById('feedEditModalBackdrop');
+    const feedEditAttractionEl = document.getElementById('feedEditAttraction');
+    const feedEditCategoryEl = document.getElementById('feedEditCategory');
+    const feedEditLatitudeEl = document.getElementById('feedEditLatitude');
+    const feedEditLongitudeEl = document.getElementById('feedEditLongitude');
+    const feedEditAddressEl = document.getElementById('feedEditAddress');
+    const feedEditImageUrlEl = document.getElementById('feedEditImageUrl');
+    const feedEditDetailEl = document.getElementById('feedEditDetail');
+    const feedEditSaveBtnEl = document.getElementById('feedEditSaveBtn');
+    const feedEditCloseBtnEl = document.getElementById('feedEditCloseBtn');
+
+    function renderFeedCard(item) {
+      const itemId = parseItemId(item.id);
+      const isHeartSelected = itemId !== null && selectedHeartIds.has(itemId);
+      const imageHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.attraction_name}" class="post-image" />` : `<div class="post-image" style="background: linear-gradient(135deg, #e9f2ff, #dfeeff); display: flex; align-items: center; justify-content: center; color: #5a7ea1;">이미지 없음</div>`;
+      return `
+        <div class="post-card" data-id="${item.id}" role="button" tabindex="0">
+          ${imageHtml}
+          <div class="post-content">
+            <div class="post-title">${item.attraction_name}</div>
+            <div class="post-category">${item.category || '미분류'}</div>
+            <div class="post-address">${item.address || '주소 없음'}</div>
+            <div class="post-actions">
+              <button type="button" class="post-action-btn post-heart-btn ${isHeartSelected ? 'active' : ''}" data-heart-id="${item.id}" aria-label="하트 선택">${isHeartSelected ? '❤' : '♡'}</button>
+              <button type="button" class="page-link post-action-btn">지도보기</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateMarkerIcons() {
+      feedMarkersById.forEach((marker, rawId) => {
+        const markerId = parseItemId(rawId);
+        if (markerId !== null && selectedHeartIds.has(markerId)) {
+          marker.setIcon(markerIconSelected);
+        } else if (lastActiveMarkerId !== null && markerId === lastActiveMarkerId) {
+          marker.setIcon(markerIconActive);
+        } else {
+          marker.setIcon(markerIconDefault);
+        }
+      });
+    }
+
+    function toggleHeart(itemId) {
+      const parsedId = parseItemId(itemId);
+      if (parsedId === null) {
+        return;
+      }
+      const willSelect = !selectedHeartIds.has(parsedId);
+      if (selectedHeartIds.has(parsedId)) {
+        selectedHeartIds.delete(parsedId);
+      } else {
+        selectedHeartIds.add(parsedId);
+      }
+      syncFeedNavState();
+      updateMarkerIcons();
+      persistHeartSelection(parsedId, willSelect);
+    }
+
+    async function persistHeartSelection(itemId, selected) {
+      try {
+        const res = await fetch('/api/location-info/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: itemId, selected }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload.error || '하트 저장 실패');
+        }
+      } catch (error) {
+        console.error(error);
+        if (selected) {
+          selectedHeartIds.delete(itemId);
+        } else {
+          selectedHeartIds.add(itemId);
+        }
+        syncFeedNavState();
+        updateMarkerIcons();
+      }
+    }
+
+    async function loadHeartSelections(itemIds) {
+      selectedHeartIds.clear();
+      if (!Array.isArray(itemIds) || itemIds.length === 0) {
+        return;
+      }
+
+      const idsParam = itemIds.join(',');
+      try {
+        const res = await fetch(`/api/location-info/favorites?ids=${encodeURIComponent(idsParam)}`, { cache: 'no-store' });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload.error || '하트 목록 조회 실패');
+        }
+
+        const favoriteIds = Array.isArray(payload.favorite_ids) ? payload.favorite_ids : [];
+        favoriteIds.forEach((idValue) => {
+          const parsed = parseItemId(idValue);
+          if (parsed !== null) {
+            selectedHeartIds.add(parsed);
+          }
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function moveFeedCard(step) {
+      const newIndex = currentFeedIndex + step;
+      if (newIndex >= 0 && newIndex < currentFeedItems.length) {
+        currentFeedIndex = newIndex;
+        syncFeedNavState();
+        syncMapMarkerToCurrentCard();
+      }
+    }
+
+    function moveFeedCardToItemId(itemId) {
+      const index = currentFeedItems.findIndex(item => item.id === itemId);
+      if (index !== -1) {
+        currentFeedIndex = index;
+        syncFeedNavState();
+        syncMapMarkerToCurrentCard();
+      }
+    }
+
+    function syncFeedNavState() {
+      tripFeedEl.innerHTML = currentFeedItems.length ? renderFeedCard(currentFeedItems[currentFeedIndex]) : '<div class="feed-empty">포스트가 없습니다.</div>';
+      feedPrevBtn.disabled = currentFeedIndex === 0;
+      feedNextBtn.disabled = currentFeedIndex === currentFeedItems.length - 1;
+      if (currentFeedItems.length === 0) {
+        feedSummaryEl.textContent = '0/0';
+      } else {
+        feedSummaryEl.textContent = `${currentFeedIndex + 1}/${currentFeedItems.length}`;
+      }
+      const postCard = tripFeedEl.querySelector('.post-card');
+      if (postCard) {
+        postCard.addEventListener('dblclick', () => openEditModal(currentFeedItems[currentFeedIndex]));
+        const mapLink = postCard.querySelector('.post-action-btn.page-link');
+        const heartBtn = postCard.querySelector('.post-heart-btn');
+        if (mapLink) {
+          mapLink.addEventListener('click', (event) => {
+            event.stopPropagation();
+            syncMapMarkerToCurrentCard();
+          });
+        }
+        if (heartBtn) {
+          heartBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleHeart(heartBtn.getAttribute('data-heart-id'));
+          });
+        }
+        postCard.addEventListener('click', (event) => {
+          if (event.target.closest('button')) {
+            return;
+          }
+          if (mapLink) {
+            mapLink.click();
+          }
+        });
+      }
+    }
+
+    function renderFeedMap(items) {
+      if (!feedMap) {
+        ensureFeedMap();
+      }
+      feedMarkersLayer.clearLayers();
+      feedMarkersById.clear();
+      lastActiveMarkerId = null;
+      const bounds = [];
+      items.forEach((point) => {
+        const lat = parseCoordinate(point.latitude);
+        const lng = parseCoordinate(point.longitude);
+        if (lat === null || lng === null) return;
+        const marker = L.marker([lat, lng], { icon: markerIconDefault });
+        marker.bindPopup(`<strong>${point.attraction_name}</strong><br/>${point.address || 'N/A'}`);
+        feedMarkersLayer.addLayer(marker);
+        feedMarkersById.set(point.id, marker);
+        marker.addEventListener('click', () => {
+          moveFeedCardToItemId(point.id);
+        });
+        bounds.push([lat, lng]);
+      });
+      if (bounds.length > 0) {
+        feedMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+        feedMapSummaryEl.textContent = `총 ${bounds.length}개 장소가 지도에 표시되었습니다.`;
+        lastActiveMarkerId = null;
+        updateMarkerIcons();
+      } else {
+        feedMapSummaryEl.textContent = '지도에 표시할 위치 정보가 없습니다.';
+      }
+    }
+
+    function syncMapMarkerToCurrentCard() {
+      if (!feedMap || !currentFeedItems.length) {
+        return;
+      }
+
+      const activeItem = currentFeedItems[currentFeedIndex];
+      const activeId = parseItemId(activeItem?.id);
+      if (activeId === null) {
+        return;
+      }
+
+      const marker = feedMarkersById.get(activeId);
+      if (!marker) {
+        return;
+      }
+
+      lastActiveMarkerId = activeId;
+      updateMarkerIcons();
+      feedMap.panTo(marker.getLatLng(), { animate: true });
+      marker.openPopup();
+    }
+
+    function ensureFeedMap() {
+      if (feedMap) return;
+      const mapEl = document.getElementById('feedMap');
+      feedMap = L.map(mapEl).setView([37.5, 126.98], 10);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(feedMap);
+      feedMarkersLayer = L.layerGroup().addTo(feedMap);
+    }
+
+    function parseCoordinate(value) {
+      const num = parseFloat(value);
+      return !isNaN(num) ? num : null;
+    }
+
+    function parseItemId(value) {
+      const num = parseInt(value, 10);
+      return !isNaN(num) ? num : null;
+    }
+
+    function openEditModal(item) {
+      editingItemId = item.id;
+      feedEditAttractionEl.value = item.attraction_name || '';
+      feedEditCategoryEl.value = item.category || '';
+      feedEditLatitudeEl.value = item.latitude || '';
+      feedEditLongitudeEl.value = item.longitude || '';
+      feedEditAddressEl.value = item.address || '';
+      feedEditImageUrlEl.value = item.image_url || '';
+      feedEditDetailEl.value = item.detail || '';
+      feedEditModalEl.hidden = false;
+    }
+
+    function closeEditModal() {
+      feedEditModalEl.hidden = true;
+      editingItemId = null;
+    }
+
+    function saveEditModal() {
+      if (!editingItemId) return;
+      fetch('/api/update-location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingItemId,
+          attraction_name: feedEditAttractionEl.value,
+          category: feedEditCategoryEl.value,
+          latitude: feedEditLatitudeEl.value,
+          longitude: feedEditLongitudeEl.value,
+          address: feedEditAddressEl.value,
+          image_url: feedEditImageUrlEl.value,
+          detail: feedEditDetailEl.value
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const idx = currentFeedItems.findIndex(item => item.id === editingItemId);
+            if (idx !== -1) {
+              currentFeedItems[idx] = { ...currentFeedItems[idx], ...data.updated };
+              syncFeedNavState();
+              renderFeedMap(currentFeedItems);
+            }
+            closeEditModal();
+          }
+        })
+        .catch(err => console.error('Save error:', err));
+    }
+
+    feedCountryEl.addEventListener('change', () => {
+      updateCityOptions();
+      loadFeedByLocation();
+    });
+    feedCityEl.addEventListener('change', loadFeedByLocation);
+    feedPrevBtn.addEventListener('click', () => moveFeedCard(-1));
+    feedNextBtn.addEventListener('click', () => moveFeedCard(1));
+    feedEditModalBackdropEl.addEventListener('click', closeEditModal);
+    feedEditCloseBtnEl.addEventListener('click', closeEditModal);
+    feedEditSaveBtnEl.addEventListener('click', saveEditModal);
+
+    function updateCityOptions() {
+      const selectedCountry = feedCountryEl.value;
+      feedCityEl.innerHTML = '<option value="">도시를 선택하세요</option>';
+
+      const cities = Array.isArray(cityOptions[selectedCountry]) ? cityOptions[selectedCountry] : [];
       cities.forEach((city) => {
         const opt = document.createElement('option');
         opt.value = city;
         opt.textContent = city;
-        citySelect.appendChild(opt);
+        feedCityEl.appendChild(opt);
       });
-
-      if (cities.includes(prevCity)) {
-        citySelect.value = prevCity;
-      }
-
-      loadFeedItems();
-    }
-
-    function handleFeedDoubleClick(event) {
-      const card = event.target.closest('.post-card[data-id]');
-      if (!card) {
-        return;
-      }
-
-      const itemId = Number(card.dataset.id);
-      if (!Number.isFinite(itemId)) {
-        return;
-      }
-
-      const item = currentFeedItems.find((entry) => Number(entry.id) === itemId);
-      if (!item) {
-        return;
-      }
-
-      openEditModal(item);
     }
 
     async function loadComboOptions() {
-      const prevCountry = countrySelect.value;
-      const prevCity = citySelect.value;
+      const prevCountry = feedCountryEl.value;
+      const prevCity = feedCityEl.value;
 
       try {
         const res = await fetch('/api/location-info/options', { cache: 'no-store' });
@@ -720,40 +1376,76 @@
         const countries = Array.isArray(payload.countries) ? payload.countries : [];
         cityOptions = payload.cities_by_country || {};
 
-        countrySelect.innerHTML = '<option value="">국가를 선택하세요</option>';
+        feedCountryEl.innerHTML = '<option value="">국가를 선택하세요</option>';
         countries.forEach((country) => {
           const opt = document.createElement('option');
           opt.value = country;
           opt.textContent = country;
-          countrySelect.appendChild(opt);
+          feedCountryEl.appendChild(opt);
         });
 
         if (prevCountry && countries.includes(prevCountry)) {
-          countrySelect.value = prevCountry;
+          feedCountryEl.value = prevCountry;
         }
 
         updateCityOptions();
-        const cities = cityOptions[countrySelect.value] || [];
-        if (prevCity && cities.includes(prevCity)) {
-          citySelect.value = prevCity;
-          loadFeedItems();
-        }
 
-        setStatus('콤보 데이터를 불러왔습니다. 국가를 먼저 선택하세요.');
-      } catch (error) {
-        console.error(error);
-        setStatus('콤보 데이터 로드 실패: LocationInfo 테이블 연결을 확인하세요.');
+        const selectedCities = Array.isArray(cityOptions[feedCountryEl.value]) ? cityOptions[feedCountryEl.value] : [];
+        if (prevCity && selectedCities.includes(prevCity)) {
+          feedCityEl.value = prevCity;
+        }
+      } catch (err) {
+        console.error('Failed to load combo options:', err);
+        // Keep server-rendered country list usable even if options API fails.
+        updateCityOptions();
       }
     }
 
-    countrySelect.addEventListener('change', updateCityOptions);
-    citySelect.addEventListener('change', loadFeedItems);
-    feedEl.addEventListener('dblclick', handleFeedDoubleClick);
-    feedEditBackdrop.addEventListener('click', closeEditModal);
-    feedEditCloseBtn.addEventListener('click', closeEditModal);
-    feedEditSaveBtn.addEventListener('click', () => {
-      saveEditModal();
-    });
+    async function loadFeedByLocation() {
+      const country = feedCountryEl.value;
+      const city = feedCityEl.value;
+      if (!country) {
+        currentFeedItems = [];
+        currentFeedIndex = 0;
+        selectedHeartIds.clear();
+        syncFeedNavState();
+        return;
+      }
+      try {
+        const url = city
+          ? `/api/location-info/list?country=${encodeURIComponent(country)}&city=${encodeURIComponent(city)}`
+          : `/api/location-info/list?country=${encodeURIComponent(country)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        currentFeedItems = items.map((item) => ({
+          id: item.id,
+          attraction_name: item.attraction,
+          category: item.category,
+          address: item.address,
+          image_url: item.image_url,
+          detail: item.detail,
+          latitude: item.latitude,
+          longitude: item.longitude,
+        }));
+        currentFeedIndex = 0;
+        const currentIds = currentFeedItems
+          .map((item) => parseItemId(item.id))
+          .filter((id) => id !== null);
+        await loadHeartSelections(currentIds);
+        syncFeedNavState();
+        renderFeedMap(currentFeedItems);
+        if (currentFeedItems.length) {
+          syncMapMarkerToCurrentCard();
+        }
+      } catch (err) {
+        console.error('Failed to load feed:', err);
+        currentFeedItems = [];
+        currentFeedIndex = 0;
+        selectedHeartIds.clear();
+        syncFeedNavState();
+      }
+    }
 
     loadComboOptions();
   </script>
