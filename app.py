@@ -396,6 +396,94 @@ def _iter_trip_days(start_date: str, end_date: str) -> list[str]:
     return days
 
 
+def _find_duplicate_trip_place(
+    cursor,
+    trip_id: int,
+    latitude: float | None,
+    longitude: float | None,
+    google_maps_uri: str,
+    exclude_place_id: int | None = None,
+):
+    if latitude is None or longitude is None or not google_maps_uri:
+        return None
+
+    params: list[object] = [trip_id, latitude, longitude, google_maps_uri]
+    exclude_clause = ''
+    if exclude_place_id is not None:
+        exclude_clause = 'AND id <> ?'
+        params.append(exclude_place_id)
+
+    cursor.execute(
+        f'''
+        SELECT TOP 1 id, place_name
+        FROM dbo.travel_trip_places
+        WHERE trip_id = ?
+          AND latitude = ?
+          AND longitude = ?
+          AND LTRIM(RTRIM(ISNULL(google_maps_uri, ''))) = LTRIM(RTRIM(?))
+          {exclude_clause}
+        ORDER BY id DESC
+        ''',
+        params,
+    )
+    return cursor.fetchone()
+
+
+def _normalize_maps_url_value(url_text: str) -> str:
+    text = str(url_text or '').strip()
+    if not text:
+        return ''
+
+    decoded_text = text
+    for _ in range(4):
+        next_value = unquote(decoded_text)
+        if next_value == decoded_text:
+            break
+        decoded_text = next_value
+
+    parsed = urlparse(decoded_text)
+    if parsed.scheme and parsed.netloc:
+        normalized_path = parsed.path.rstrip('/')
+        normalized = f'{parsed.scheme.lower()}://{parsed.netloc.lower()}{normalized_path}'
+        if parsed.query:
+            normalized += f'?{parsed.query}'
+        return normalized
+
+    return decoded_text.strip().lower()
+
+
+def _find_duplicate_location_info(
+    cursor,
+    maps_url: str,
+    latitude: float | None,
+    longitude: float | None,
+    exclude_item_id: int | None = None,
+):
+    if latitude is None or longitude is None:
+        return None
+
+    params: list[object] = [latitude, longitude]
+    exclude_clause = ''
+    if exclude_item_id is not None:
+        exclude_clause = 'AND id <> ?'
+        params.append(exclude_item_id)
+
+    cursor.execute(
+        f'''
+        SELECT TOP (1) id
+        FROM dbo.LocationInfo
+        WHERE [Latitude] IS NOT NULL
+          AND [Longitude] IS NOT NULL
+          AND ABS([Latitude] - ?) < 0.000001
+          AND ABS([Longitude] - ?) < 0.000001
+          {exclude_clause}
+        ORDER BY id DESC
+        ''',
+        params,
+    )
+    return cursor.fetchone()
+
+
 @app.errorhandler(HTTPException)
 def handle_http_exception(exc: HTTPException):
     if request.path.startswith('/api/'):
@@ -1227,6 +1315,7 @@ def create_location_info_option():
 def location_info_list():
     country = str(request.args.get('country') or '').strip()
     city = str(request.args.get('city') or '').strip()
+    keyword = str(request.args.get('keyword') or '').strip()
 
     where_clauses = []
     params: list[str] = []
@@ -1236,6 +1325,16 @@ def location_info_list():
     if city:
         where_clauses.append('LTRIM(RTRIM(ISNULL([City], \'\'))) = ?')
         params.append(city)
+    if keyword:
+        where_clauses.append(
+            '('
+            "LTRIM(RTRIM(ISNULL([Attraction], ''))) LIKE ? OR "
+            "LTRIM(RTRIM(ISNULL([Detail], ''))) LIKE ? OR "
+            "LTRIM(RTRIM(ISNULL([Address], ''))) LIKE ?"
+            ')'
+        )
+        like_keyword = f'%{keyword}%'
+        params.extend([like_keyword, like_keyword, like_keyword])
 
     where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ''
 
@@ -1392,7 +1491,7 @@ def create_location_info():
     attraction = str(data.get('attraction') or '').strip()
     detail = str(data.get('detail') or '').strip()
     image_url = str(data.get('image_url') or '').strip()
-    maps_url = str(data.get('maps_url') or '').strip()
+    maps_url = _normalize_maps_url_value(data.get('maps_url') or '')
     address = str(data.get('address') or '').strip()
     latitude = _parse_float(data.get('latitude'))
     longitude = _parse_float(data.get('longitude'))
@@ -1409,41 +1508,6 @@ def create_location_info():
         with _get_mssql_conn() as conn:
             _ensure_location_info_columns(conn)
             cursor = conn.cursor()
-
-            cursor.execute(
-                '''
-                SELECT TOP (1) id
-                FROM dbo.LocationInfo
-                WHERE LTRIM(RTRIM(ISNULL([Country], ''))) = ?
-                  AND LTRIM(RTRIM(ISNULL([City], ''))) = ?
-                  AND LTRIM(RTRIM(ISNULL([Attraction], ''))) = ?
-                  AND LTRIM(RTRIM(ISNULL([Detail], ''))) = ?
-                  AND LTRIM(RTRIM(ISNULL([ImageUrl], ''))) = ?
-                  AND LTRIM(RTRIM(ISNULL([GoogleMapsUrl], ''))) = ?
-                  AND LTRIM(RTRIM(ISNULL([Address], ''))) = ?
-                  AND LTRIM(RTRIM(ISNULL([Category], ''))) = ?
-                  AND (([Latitude] IS NULL AND ? IS NULL) OR [Latitude] = ?)
-                  AND (([Longitude] IS NULL AND ? IS NULL) OR [Longitude] = ?)
-                ORDER BY id DESC
-                ''',
-                (
-                    country,
-                    city,
-                    attraction,
-                    detail,
-                    image_url,
-                    maps_url,
-                    address,
-                    category,
-                    latitude,
-                    latitude,
-                    longitude,
-                    longitude,
-                ),
-            )
-            existing = cursor.fetchone()
-            if existing:
-                return jsonify({'message': '동일 데이터가 이미 존재합니다.', 'id': _safe_int(existing[0]), 'duplicate': True}), 200
 
             cursor.execute(
                 '''
@@ -1486,7 +1550,7 @@ def update_location_info(item_id: int):
     attraction = str(data.get('attraction') or '').strip()
     detail = str(data.get('detail') or '').strip()
     image_url = str(data.get('image_url') or '').strip()
-    maps_url = str(data.get('maps_url') or '').strip()
+    maps_url = _normalize_maps_url_value(data.get('maps_url') or '')
     address = str(data.get('address') or '').strip()
     latitude = _parse_float(data.get('latitude'))
     longitude = _parse_float(data.get('longitude'))
@@ -1505,6 +1569,7 @@ def update_location_info(item_id: int):
         with _get_mssql_conn() as conn:
             _ensure_location_info_columns(conn)
             cursor = conn.cursor()
+
             cursor.execute(
                 '''
                 UPDATE dbo.LocationInfo
@@ -1544,6 +1609,44 @@ def update_location_info(item_id: int):
         return jsonify({'message': '수정되었습니다.', 'id': item_id}), 200
     except (RuntimeError, pyodbc.Error) as exc:
         return jsonify({'error': f'수정 실패: {exc}'}), 500
+
+
+@app.route('/api/location-info/bulk-delete', methods=['POST'])
+def bulk_delete_location_info():
+    data = request.get_json(silent=True) or {}
+    raw_ids = data.get('ids')
+
+    if not isinstance(raw_ids, list):
+        return jsonify({'error': '삭제할 ids 목록이 필요합니다.'}), 400
+
+    parsed_ids: list[int] = []
+    for value in raw_ids:
+        parsed = _safe_int(value)
+        if parsed is not None and parsed > 0:
+            parsed_ids.append(parsed)
+
+    if not parsed_ids:
+        return jsonify({'error': '유효한 삭제 ID가 없습니다.'}), 400
+
+    # Preserve order but remove duplicates.
+    unique_ids = list(dict.fromkeys(parsed_ids))
+
+    try:
+        with _get_mssql_conn() as conn:
+            _ensure_location_info_columns(conn)
+            cursor = conn.cursor()
+
+            placeholders = ','.join(['?'] * len(unique_ids))
+            cursor.execute(
+                f'''DELETE FROM dbo.LocationInfo WHERE id IN ({placeholders})''',
+                tuple(unique_ids),
+            )
+            deleted_count = cursor.rowcount if cursor.rowcount is not None else 0
+            conn.commit()
+
+        return jsonify({'deleted_count': deleted_count, 'ids': unique_ids}), 200
+    except (RuntimeError, pyodbc.Error) as exc:
+        return jsonify({'error': f'삭제 실패: {exc}'}), 500
 
 
 @app.route('/api/trips', methods=['GET'])
@@ -1822,6 +1925,17 @@ def create_trip_place():
             if not cursor.fetchone():
                 return jsonify({'error': '선택한 여행이 존재하지 않습니다.'}), 404
 
+            duplicate_row = _find_duplicate_trip_place(cursor, trip_id, latitude, longitude, google_maps_uri)
+            if duplicate_row:
+                duplicate_name = str(duplicate_row.place_name or '').strip()
+                return jsonify({
+                    'error': '같은 여행에 동일한 위도/경도/구글 URL 조합의 장소가 이미 저장되어 있습니다.',
+                    'duplicate_place': {
+                        'id': duplicate_row.id,
+                        'place_name': duplicate_name,
+                    },
+                }), 409
+
             cursor.execute(
                 '''
                 INSERT INTO dbo.travel_trip_places (trip_id, place_name, place_category, formatted_address, google_maps_uri, latitude, longitude, memo)
@@ -1941,6 +2055,24 @@ def update_trip_place(place_id: int):
                 else:
                     latitude = None
                     longitude = None
+
+            duplicate_row = _find_duplicate_trip_place(
+                cursor,
+                int(existing.get('trip_id') or 0),
+                latitude,
+                longitude,
+                google_maps_uri,
+                exclude_place_id=place_id,
+            )
+            if duplicate_row:
+                duplicate_name = str(duplicate_row.place_name or '').strip()
+                return jsonify({
+                    'error': '같은 여행에 동일한 위도/경도/구글 URL 조합의 장소가 이미 저장되어 있습니다.',
+                    'duplicate_place': {
+                        'id': duplicate_row.id,
+                        'place_name': duplicate_name,
+                    },
+                }), 409
 
             cursor.execute(
                 '''

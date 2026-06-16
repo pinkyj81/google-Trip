@@ -296,6 +296,10 @@
     .col-id {
       width: 60px;
     }
+    .col-select {
+      width: 52px;
+      text-align: center;
+    }
     .col-country,
     .col-city {
       width: 90px;
@@ -318,6 +322,16 @@
     }
     .col-detail {
       width: 220px;
+    }
+    td.col-select {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .list-select-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #1f5fb5;
     }
     td.col-country,
     td.col-city,
@@ -673,12 +687,16 @@
               <span>등록된 리스트</span>
               <span class="list-hint">행 더블클릭으로 수정</span>
             </span>
-            <span id="listSummary">0건</span>
+            <span style="display: inline-flex; align-items: center; gap: 8px;">
+              <button id="deleteSelectedBtn" class="secondary mini-btn" type="button" disabled>선택 삭제</button>
+              <span id="listSummary">0건</span>
+            </span>
           </div>
           <div class="list-body">
             <table>
               <thead>
                 <tr>
+                  <th class="col-select"><input id="tripInfoSelectAll" class="list-select-checkbox" type="checkbox" aria-label="전체 선택" /></th>
                   <th class="col-id">ID</th>
                   <th class="col-country">국가</th>
                   <th class="col-city">도시</th>
@@ -692,7 +710,7 @@
                 </tr>
               </thead>
               <tbody id="tripInfoListBody">
-                <tr><td class="empty-row" colspan="10">리스트를 불러오는 중...</td></tr>
+                <tr><td class="empty-row" colspan="11">리스트를 불러오는 중...</td></tr>
               </tbody>
             </table>
           </div>
@@ -934,6 +952,8 @@
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const listBodyEl = document.getElementById('tripInfoListBody');
     const listSummaryEl = document.getElementById('listSummary');
+    const tripInfoSelectAllEl = document.getElementById('tripInfoSelectAll');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
     const newCountryInput = document.getElementById('tripInfoNewCountry');
     const newCityInput = document.getElementById('tripInfoNewCity');
     const addCountryCityBtn = document.getElementById('addCountryCityBtn');
@@ -970,6 +990,7 @@
     cityOptions = initialCitiesByCountry || {};
     let currentItems = [];
     let editingId = null;
+    const selectedListIds = new Set();
     let googleCandidates = [];
     let tripPickerFeedPlaces = [];
     const selectedTripPickerIndexes = new Set();
@@ -1297,15 +1318,11 @@
         if (!res.ok) {
           throw new Error(data.error || 'LocationInfo 저장 실패');
         }
-        if (data.duplicate) {
-          duplicated += 1;
-        } else {
           saved += 1;
-        }
       }
 
-      tripPickerGoogleStatus.textContent = `LocationInfo 저장 완료: 신규 ${saved}건, 중복 ${duplicated}건`;
-      setStatus(`LocationInfo 저장 완료: 신규 ${saved}건, 중복 ${duplicated}건`);
+        tripPickerGoogleStatus.textContent = `LocationInfo 저장 완료: ${saved}건 저장되었습니다.`;
+        setStatus(`LocationInfo 저장 완료: ${saved}건 저장되었습니다.`);
       await loadComboOptions();
     }
 
@@ -1486,6 +1503,34 @@
       listBodyEl.querySelectorAll('tr.editing-row').forEach((row) => row.classList.remove('editing-row'));
     }
 
+    function updateListSelectionUi() {
+      const allIds = currentItems
+        .map((item) => Number(item.id))
+        .filter((id) => Number.isFinite(id));
+
+      const selectedCount = allIds.filter((id) => selectedListIds.has(id)).length;
+      const hasRows = allIds.length > 0;
+
+      tripInfoSelectAllEl.checked = hasRows && selectedCount === allIds.length;
+      tripInfoSelectAllEl.indeterminate = selectedCount > 0 && selectedCount < allIds.length;
+
+      deleteSelectedBtn.disabled = selectedCount === 0;
+      deleteSelectedBtn.textContent = selectedCount > 0 ? `선택 삭제 (${selectedCount})` : '선택 삭제';
+    }
+
+    function pruneSelectionByCurrentItems() {
+      const validIds = new Set(
+        currentItems
+          .map((item) => Number(item.id))
+          .filter((id) => Number.isFinite(id))
+      );
+      Array.from(selectedListIds).forEach((id) => {
+        if (!validIds.has(id)) {
+          selectedListIds.delete(id);
+        }
+      });
+    }
+
     function ensureOption(selectEl, value) {
       if (!value) {
         return;
@@ -1560,22 +1605,29 @@
       currentItems = Array.isArray(items) ? items : [];
 
       if (!Array.isArray(items) || items.length === 0) {
-        listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="10">선택한 조건의 등록 데이터가 없습니다.</td></tr>';
+        selectedListIds.clear();
+        listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="11">선택한 조건의 등록 데이터가 없습니다.</td></tr>';
         listSummaryEl.textContent = '0건';
+        updateListSelectionUi();
         clearEditMode(false);
         return;
       }
+
+      pruneSelectionByCurrentItems();
 
       const rows = items.map((item) => {
         const detail = item.detail ? String(item.detail) : '-';
         const lat = item.latitude == null ? '-' : String(item.latitude);
         const lng = item.longitude == null ? '-' : String(item.longitude);
         const imageUrl = String(item.image_url || '').trim();
+        const itemId = Number(item.id);
+        const isChecked = Number.isFinite(itemId) && selectedListIds.has(itemId);
         const imageCell = imageUrl
           ? `<img class="list-thumb" src="${escapeHtml(imageUrl)}" alt="thumb" onerror="this.style.display='none'" />${escapeHtml(imageUrl)}`
           : '-';
         return `
           <tr data-id="${escapeHtml(item.id ?? '')}">
+            <td class="col-select"><input class="list-select-checkbox js-list-select" type="checkbox" data-id="${escapeHtml(item.id ?? '')}" ${isChecked ? 'checked' : ''} aria-label="항목 선택" /></td>
             <td class="col-id">${escapeHtml(item.id ?? '-')}</td>
             <td class="col-country">${escapeHtml(item.country ?? '')}</td>
             <td class="col-city">${escapeHtml(item.city ?? '')}</td>
@@ -1592,6 +1644,7 @@
 
       listBodyEl.innerHTML = rows.join('');
       listSummaryEl.textContent = `${items.length}건`;
+      updateListSelectionUi();
       applyRowHighlight();
     }
 
@@ -1605,15 +1658,17 @@
       }
 
       if (!countrySelect.value || !citySelect.value) {
-        listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="10">국가와 도시를 선택하면 등록 리스트를 보여드립니다.</td></tr>';
+        selectedListIds.clear();
+        listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="11">국가와 도시를 선택하면 등록 리스트를 보여드립니다.</td></tr>';
         listSummaryEl.textContent = '0건';
         currentItems = [];
+        updateListSelectionUi();
         clearEditMode(false);
         return;
       }
 
       const url = `/api/location-info/list?${params.toString()}`;
-      listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="10">등록 리스트를 불러오는 중...</td></tr>';
+      listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="11">등록 리스트를 불러오는 중...</td></tr>';
 
       try {
         const res = await fetch(url, { cache: 'no-store' });
@@ -1624,9 +1679,51 @@
         renderList(payload.items || []);
       } catch (error) {
         console.error(error);
-        listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="10">등록 리스트 조회에 실패했습니다.</td></tr>';
+        listBodyEl.innerHTML = '<tr><td class="empty-row" colspan="11">등록 리스트 조회에 실패했습니다.</td></tr>';
         listSummaryEl.textContent = '-';
         currentItems = [];
+        selectedListIds.clear();
+        updateListSelectionUi();
+      }
+    }
+
+    async function deleteSelectedLocations() {
+      const ids = Array.from(selectedListIds).filter((id) => Number.isFinite(id));
+      if (ids.length === 0) {
+        setStatus('삭제할 항목을 먼저 선택하세요.');
+        return;
+      }
+
+      if (!window.confirm(`선택한 ${ids.length}개 항목을 삭제할까요?`)) {
+        return;
+      }
+
+      deleteSelectedBtn.disabled = true;
+      tripInfoSelectAllEl.disabled = true;
+      setStatus(`선택한 ${ids.length}개 항목 삭제 중...`);
+
+      try {
+        const res = await fetch('/api/location-info/bulk-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload.error || '선택 삭제 실패');
+        }
+
+        const deletedCount = Number(payload.deleted_count) || 0;
+        selectedListIds.clear();
+        clearEditMode(true);
+        await loadRegisteredList();
+        setStatus(`${deletedCount}개 항목을 삭제했습니다.`);
+      } catch (error) {
+        console.error(error);
+        setStatus(`선택 삭제 실패: ${error.message}`);
+        updateListSelectionUi();
+      } finally {
+        tripInfoSelectAllEl.disabled = false;
       }
     }
 
@@ -1901,6 +1998,9 @@
     }
 
     function handleListDoubleClick(event) {
+      if (event.target.closest('.js-list-select')) {
+        return;
+      }
       const row = event.target.closest('tr[data-id]');
       if (!row) {
         return;
@@ -1917,6 +2017,45 @@
       }
 
       startEdit(item);
+    }
+
+    function handleListCheckboxChange(event) {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) {
+        return;
+      }
+
+      if (target.id === 'tripInfoSelectAll') {
+        const shouldSelect = target.checked;
+        currentItems.forEach((item) => {
+          const id = Number(item.id);
+          if (Number.isFinite(id)) {
+            if (shouldSelect) {
+              selectedListIds.add(id);
+            } else {
+              selectedListIds.delete(id);
+            }
+          }
+        });
+        renderList(currentItems);
+        return;
+      }
+
+      if (!target.classList.contains('js-list-select')) {
+        return;
+      }
+
+      const id = Number(target.dataset.id);
+      if (!Number.isFinite(id)) {
+        return;
+      }
+
+      if (target.checked) {
+        selectedListIds.add(id);
+      } else {
+        selectedListIds.delete(id);
+      }
+      updateListSelectionUi();
     }
 
     countrySelect.addEventListener('change', updateCityOptions);
@@ -1945,8 +2084,11 @@
     googleResultBodyEl.addEventListener('change', handleGoogleResultCheck);
     addCountryCityBtn.addEventListener('click', addCountryCityOption);
     refreshListBtn.addEventListener('click', loadRegisteredList);
+    deleteSelectedBtn.addEventListener('click', deleteSelectedLocations);
     cancelEditBtn.addEventListener('click', () => clearEditMode(true));
     imageUrlInput.addEventListener('input', updateImagePreview);
+    tripInfoSelectAllEl.addEventListener('change', handleListCheckboxChange);
+    listBodyEl.addEventListener('change', handleListCheckboxChange);
     listBodyEl.addEventListener('dblclick', handleListDoubleClick);
     formEl.addEventListener('submit', saveLocationInfo);
     openTripPickerModalBtn.addEventListener('click', openTripPickerModal);

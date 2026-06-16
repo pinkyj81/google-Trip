@@ -3684,6 +3684,12 @@
         body: JSON.stringify(payload)
       });
       const data = await readApiData(response);
+      if (response.status === 409) {
+        return {
+          id: data.duplicate_place_id || null,
+          duplicate: true,
+        };
+      }
       if (!response.ok) {
         throw new Error(data.error || 'LocationInfo 저장 실패');
       }
@@ -4249,7 +4255,7 @@
         }
       }
 
-      statusText.textContent = `LocationInfo 신규 ${locationSaved}건 저장 (중복 ${locationDuplicated}건)`;
+      statusText.textContent = `LocationInfo 신규 ${locationSaved}건 저장 완료, 중복 ${locationDuplicated}건은 제외했습니다.`;
       closePhotoPicker();
     }
 

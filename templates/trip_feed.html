@@ -73,8 +73,9 @@
     .combo-grid {
       margin-top: 16px;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.2fr);
       gap: 12px;
+      align-items: end;
     }
     label {
       display: block;
@@ -91,6 +92,27 @@
       background: #f7fbff;
       color: #1f4e7f;
       font-family: inherit;
+    }
+    .feed-search-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .feed-search-input {
+      width: 100%;
+      border: 1px solid #bcd8f5;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 15px;
+      background: #f7fbff;
+      color: #1f4e7f;
+      font-family: inherit;
+    }
+    .feed-search-btn {
+      border-radius: 12px;
+      padding: 11px 14px;
+      white-space: nowrap;
     }
     .content-split {
       margin-top: 16px;
@@ -132,7 +154,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 12px 60px;
+      padding: 12px;
       min-height: 450px;
       background: #fafdff;
       border: 1px solid #cfe1f4;
@@ -157,9 +179,9 @@
       height: 42px;
       border: 0;
       border-radius: 50%;
-      background: rgba(238, 246, 255, 0.95);
-      color: #1f5fb5;
-      font-size: 28px;
+      background: transparent;
+      color: #0f2f52;
+      font-size: 40px;
       font-weight: bold;
       cursor: pointer;
       z-index: 10;
@@ -167,10 +189,10 @@
       align-items: center;
       justify-content: center;
       line-height: 1;
-      transition: background 0.2s;
+      transition: color 0.2s;
     }
     .feed-nav-btn:hover:not(:disabled) {
-      background: #dfeeff;
+      color: #0a2139;
     }
     .feed-nav-btn:disabled {
       opacity: 0.4;
@@ -205,6 +227,21 @@
       object-fit: cover;
       background: #f0f5fa;
     }
+    .post-image-wrap {
+      position: relative;
+      cursor: pointer;
+    }
+    .post-image-wrap .feed-nav-btn {
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+    }
+    .post-image-wrap .feed-nav-btn.prev {
+      left: 10px;
+    }
+    .post-image-wrap .feed-nav-btn.next {
+      right: 10px;
+    }
     .post-content {
       padding: 16px;
     }
@@ -231,6 +268,14 @@
       font-size: 13px;
       color: #38648d;
       line-height: 1.4;
+      word-break: keep-all;
+    }
+    .post-detail {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: #38648d;
+      line-height: 1.5;
+      white-space: pre-wrap;
       word-break: keep-all;
     }
     .post-actions {
@@ -369,18 +414,18 @@
         padding: 0;
       }
       .feed-carousel-shell {
-        padding: 12px 34px;
+        padding: 12px;
       }
       .feed-nav-btn {
         width: 36px;
         height: 36px;
-        font-size: 24px;
+        font-size: 34px;
       }
       .feed-nav-btn.prev {
-        left: 6px;
+        left: 8px;
       }
       .feed-nav-btn.next {
-        right: 6px;
+        right: 8px;
       }
       .post-card {
         width: min(86vw, 320px);
@@ -481,6 +526,13 @@
             <option value="">도시를 선택하세요</option>
           </select>
         </div>
+        <div>
+          <label for="feedKeyword">단어 검색</label>
+          <div class="feed-search-row">
+            <input id="feedKeyword" class="feed-search-input" type="text" placeholder="관광지/상세 설명 검색" />
+            <button id="feedSearchBtn" type="button" class="page-link feed-search-btn">검색</button>
+          </div>
+        </div>
       </div>
 
       <div class="content-split">
@@ -493,11 +545,9 @@
             <span id="feedSummary">0/0</span>
           </div>
           <div class="feed-carousel-shell">
-            <button id="feedPrevBtn" class="feed-nav-btn prev" type="button" aria-label="이전 포스트">‹</button>
             <div id="tripFeed" class="feed-grid">
               <div class="feed-empty">국가와 도시를 선택하면 여행 포스트가 표시됩니다.</div>
             </div>
-            <button id="feedNextBtn" class="feed-nav-btn next" type="button" aria-label="다음 포스트">›</button>
           </div>
         </div>
         <div class="map-wrap">
@@ -577,6 +627,61 @@
         <button id="feedPickerGoogleBtn" type="button" class="page-link" style="display: inline-flex; padding: 10px 16px; text-decoration: none; border-radius: 10px; border: 0;">구글API</button>
       </div>
       <p id="feedPickerNote" class="modal-note">시작 방식을 선택하세요.</p>
+      <div id="feedPickerParseSection" style="display: none; border: 1px solid #bcd8f5; border-radius: 12px; padding: 12px; background: rgba(240, 247, 255, 0.65);">
+        <div class="edit-grid">
+          <div>
+            <label for="feedPickerParseMapsUrl">구글맵스 링크</label>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <input id="feedPickerParseMapsUrl" placeholder="https://maps.google.com/..." style="flex: 1 1 360px;" />
+              <button id="runFeedPickerParseBtn" type="button" class="page-link" style="border: 0;">링크 파싱</button>
+            </div>
+          </div>
+          <div class="edit-grid-3">
+            <div>
+              <label for="feedPickerParseCountry">국가</label>
+              <input id="feedPickerParseCountry" placeholder="예: 그리스" />
+            </div>
+            <div>
+              <label for="feedPickerParseCity">도시</label>
+              <input id="feedPickerParseCity" placeholder="예: 아테네" />
+            </div>
+            <div>
+              <label for="feedPickerParseCategory">카테고리</label>
+              <select id="feedPickerParseCategory">
+                <option value="관광지">관광지</option>
+                <option value="랜드마크">랜드마크</option>
+                <option value="맛집">맛집</option>
+                <option value="카페">카페</option>
+                <option value="숙소">숙소</option>
+                <option value="기타">기타</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="feedPickerParseAttraction">관광지명</label>
+            <input id="feedPickerParseAttraction" placeholder="파싱 후 자동 입력됩니다." />
+          </div>
+          <div>
+            <label for="feedPickerParseAddress">주소</label>
+            <input id="feedPickerParseAddress" placeholder="가능하면 자동 입력됩니다." />
+          </div>
+          <div class="edit-grid-3">
+            <div>
+              <label for="feedPickerParseLatitude">위도</label>
+              <input id="feedPickerParseLatitude" type="number" step="0.000001" />
+            </div>
+            <div>
+              <label for="feedPickerParseLongitude">경도</label>
+              <input id="feedPickerParseLongitude" type="number" step="0.000001" />
+            </div>
+            <div>
+              <label for="feedPickerParseImageUrl">이미지 URL</label>
+              <input id="feedPickerParseImageUrl" placeholder="가능하면 자동 입력됩니다." />
+            </div>
+          </div>
+          <div id="feedPickerParseStatus" class="edit-mini-note">구글맵스 링크를 붙여넣고 링크 파싱을 누르세요.</div>
+        </div>
+      </div>
       <div id="feedPickerGoogleSection" style="display: none; border: 1px solid #bcd8f5; border-radius: 12px; padding: 12px; background: rgba(240, 247, 255, 0.65);">
         <div class="edit-grid-3">
           <div>
@@ -668,6 +773,18 @@
     const feedPickerParseBtnEl = document.getElementById('feedPickerParseBtn');
     const feedPickerGoogleBtnEl = document.getElementById('feedPickerGoogleBtn');
     const feedPickerNoteEl = document.getElementById('feedPickerNote');
+    const feedPickerParseSectionEl = document.getElementById('feedPickerParseSection');
+    const feedPickerParseMapsUrlEl = document.getElementById('feedPickerParseMapsUrl');
+    const runFeedPickerParseBtnEl = document.getElementById('runFeedPickerParseBtn');
+    const feedPickerParseCountryEl = document.getElementById('feedPickerParseCountry');
+    const feedPickerParseCityEl = document.getElementById('feedPickerParseCity');
+    const feedPickerParseCategoryEl = document.getElementById('feedPickerParseCategory');
+    const feedPickerParseAttractionEl = document.getElementById('feedPickerParseAttraction');
+    const feedPickerParseAddressEl = document.getElementById('feedPickerParseAddress');
+    const feedPickerParseLatitudeEl = document.getElementById('feedPickerParseLatitude');
+    const feedPickerParseLongitudeEl = document.getElementById('feedPickerParseLongitude');
+    const feedPickerParseImageUrlEl = document.getElementById('feedPickerParseImageUrl');
+    const feedPickerParseStatusEl = document.getElementById('feedPickerParseStatus');
     const feedPickerGoogleSectionEl = document.getElementById('feedPickerGoogleSection');
     const feedPickerGoogleCountryEl = document.getElementById('feedPickerGoogleCountry');
     const feedPickerGoogleCountryCustomEl = document.getElementById('feedPickerGoogleCountryCustom');
@@ -702,6 +819,7 @@
 
     let feedPickerPlaces = [];
     const selectedFeedPickerIndexes = new Set();
+  let feedPickerMode = '';
 
     function updateFeedPickerGoogleCities() {
       const code = feedPickerGoogleCountryEl.value || '';
@@ -968,12 +1086,162 @@
       }
     }
 
+    async function reverseGeocodeFeedPicker(lat, lng) {
+      if (lat === '' || lng === '' || lat == null || lng == null) {
+        return '';
+      }
+
+      try {
+        const endpoint = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+        const response = await fetch(endpoint, {
+          headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) {
+          return '';
+        }
+        const payload = await response.json();
+        return String(payload?.display_name || '').trim();
+      } catch {
+        return '';
+      }
+    }
+
+    async function runFeedPickerParse() {
+      const mapsUrl = feedPickerParseMapsUrlEl.value.trim();
+      if (!mapsUrl) {
+        feedPickerParseStatusEl.textContent = '구글맵스 링크를 먼저 입력하세요.';
+        feedPickerParseMapsUrlEl.focus();
+        return;
+      }
+
+      runFeedPickerParseBtnEl.disabled = true;
+      feedPickerParseStatusEl.textContent = '링크 파싱 중...';
+
+      try {
+        const res = await fetch('/api/maps-resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ maps_url: mapsUrl }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload.error || '링크 파싱 실패');
+        }
+
+        if (payload.final_url) {
+          feedPickerParseMapsUrlEl.value = String(payload.final_url);
+        }
+        if (payload.place_name && !feedPickerParseAttractionEl.value.trim()) {
+          feedPickerParseAttractionEl.value = String(payload.place_name).trim();
+        }
+        if (payload.latitude != null) {
+          feedPickerParseLatitudeEl.value = String(payload.latitude);
+        }
+        if (payload.longitude != null) {
+          feedPickerParseLongitudeEl.value = String(payload.longitude);
+        }
+        if (payload.photo_url) {
+          feedPickerParseImageUrlEl.value = String(payload.photo_url).trim();
+        }
+
+        if (!feedPickerParseAddressEl.value.trim() && payload.latitude != null && payload.longitude != null) {
+          const derivedAddress = await reverseGeocodeFeedPicker(payload.latitude, payload.longitude);
+          if (derivedAddress) {
+            feedPickerParseAddressEl.value = derivedAddress;
+          }
+        }
+
+        feedPickerParseStatusEl.textContent = payload.latitude != null && payload.longitude != null
+          ? '파싱 완료. 관광지명/좌표를 채웠습니다. 필요한 값 확인 후 저장하세요.'
+          : '파싱 완료. 링크에서 이름만 찾았습니다. 나머지 값은 직접 보완 후 저장하세요.';
+      } catch (error) {
+        console.error(error);
+        feedPickerParseStatusEl.textContent = `파싱 실패: ${error.message}`;
+      } finally {
+        runFeedPickerParseBtnEl.disabled = false;
+      }
+    }
+
+    async function saveFeedPickerParsedItem() {
+      const country = feedPickerParseCountryEl.value.trim();
+      const city = feedPickerParseCityEl.value.trim();
+      const attraction = feedPickerParseAttractionEl.value.trim();
+      const latitude = feedPickerParseLatitudeEl.value.trim();
+      const longitude = feedPickerParseLongitudeEl.value.trim();
+
+      if (!country || !city || !attraction) {
+        feedPickerParseStatusEl.textContent = '국가, 도시, 관광지명은 입력해야 저장할 수 있습니다.';
+        return;
+      }
+
+      feedPickerSaveBtnEl.disabled = true;
+      feedPickerParseStatusEl.textContent = '파싱 결과 저장 중...';
+
+      try {
+        const res = await fetch('/api/location-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            country,
+            city,
+            attraction,
+            detail: '',
+            image_url: feedPickerParseImageUrlEl.value.trim(),
+            maps_url: feedPickerParseMapsUrlEl.value.trim(),
+            address: feedPickerParseAddressEl.value.trim(),
+            latitude,
+            longitude,
+            category: feedPickerParseCategoryEl.value.trim(),
+          }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload.error || 'LocationInfo 저장 실패');
+        }
+
+        feedPickerParseStatusEl.textContent = '저장 완료. 방금 파싱한 장소가 등록되었습니다.';
+        feedPickerNoteEl.textContent = '파싱 저장이 완료되었습니다.';
+        await loadComboOptions();
+        if (Array.isArray(cityOptions[country]) && cityOptions[country].includes(city)) {
+          feedCountryEl.value = country;
+          updateCityOptions();
+          feedCityEl.value = city;
+          await loadFeedByLocation();
+        }
+      } catch (error) {
+        console.error(error);
+        feedPickerParseStatusEl.textContent = `저장 실패: ${error.message}`;
+      } finally {
+        feedPickerSaveBtnEl.disabled = false;
+      }
+    }
+
+    async function handleFeedPickerSave() {
+      if (feedPickerMode === 'parse') {
+        await saveFeedPickerParsedItem();
+        return;
+      }
+      await saveFeedPickerSelected();
+    }
+
     feedOpenPickerBtn.addEventListener('click', () => {
+      feedPickerMode = '';
+      feedPickerParseSectionEl.style.display = 'none';
       feedPickerGoogleSectionEl.style.display = 'none';
       feedPickerPlaces = [];
       selectedFeedPickerIndexes.clear();
       renderFeedPickerFeed();
       feedPickerNoteEl.textContent = '시작 방식을 선택하세요.';
+      feedPickerParseStatusEl.textContent = '구글맵스 링크를 붙여넣고 링크 파싱을 누르세요.';
+      feedPickerParseMapsUrlEl.value = '';
+      feedPickerParseCountryEl.value = feedCountryEl.value || '';
+      feedPickerParseCityEl.value = feedCityEl.value || '';
+      feedPickerParseCategoryEl.value = '관광지';
+      feedPickerParseAttractionEl.value = '';
+      feedPickerParseAddressEl.value = '';
+      feedPickerParseLatitudeEl.value = '';
+      feedPickerParseLongitudeEl.value = '';
+      feedPickerParseImageUrlEl.value = '';
       feedPickerModal.hidden = false;
     });
 
@@ -984,12 +1252,19 @@
     feedPickerBackdrop.addEventListener('click', () => {
       feedPickerModal.hidden = true;
     });
-    feedPickerSaveBtnEl.addEventListener('click', saveFeedPickerSelected);
+    feedPickerSaveBtnEl.addEventListener('click', handleFeedPickerSave);
     feedPickerParseBtnEl.addEventListener('click', () => {
+      feedPickerMode = 'parse';
+      feedPickerParseSectionEl.style.display = 'block';
       feedPickerGoogleSectionEl.style.display = 'none';
-      feedPickerNoteEl.textContent = '파싱 기능은 준비 중입니다. 구글API를 선택하면 바로 검색할 수 있습니다.';
+      feedPickerParseCountryEl.value = feedPickerParseCountryEl.value || feedCountryEl.value || '';
+      feedPickerParseCityEl.value = feedPickerParseCityEl.value || feedCityEl.value || '';
+      feedPickerParseMapsUrlEl.focus();
+      feedPickerNoteEl.textContent = '구글맵스 링크를 붙여넣고 링크 파싱 후 저장하세요.';
     });
     feedPickerGoogleBtnEl.addEventListener('click', () => {
+      feedPickerMode = 'google';
+      feedPickerParseSectionEl.style.display = 'none';
       feedPickerGoogleSectionEl.style.display = 'block';
       if (!feedPickerGoogleCountryEl.value) {
         feedPickerGoogleCountryEl.value = 'US';
@@ -1000,6 +1275,7 @@
       updateFeedPickerGoogleCities();
       feedPickerNoteEl.textContent = '국가/도시를 선택하거나 직접 입력한 뒤 검색을 누르세요.';
     });
+    runFeedPickerParseBtnEl.addEventListener('click', runFeedPickerParse);
     feedPickerGoogleCountryEl.addEventListener('change', updateFeedPickerGoogleCities);
     runFeedPickerGoogleSearchBtnEl.addEventListener('click', runFeedPickerGoogleSearch);
     feedPickerFeedGridEl.addEventListener('click', handleFeedPickerFeedClick);
@@ -1046,11 +1322,11 @@
 
     const feedCountryEl = document.getElementById('feedCountry');
     const feedCityEl = document.getElementById('feedCity');
+    const feedKeywordEl = document.getElementById('feedKeyword');
+    const feedSearchBtnEl = document.getElementById('feedSearchBtn');
     const tripFeedEl = document.getElementById('tripFeed');
     const feedSummaryEl = document.getElementById('feedSummary');
     const feedMapSummaryEl = document.getElementById('feedMapSummary');
-    const feedPrevBtn = document.getElementById('feedPrevBtn');
-    const feedNextBtn = document.getElementById('feedNextBtn');
     const feedEditModalEl = document.getElementById('feedEditModal');
     const feedEditModalBackdropEl = document.getElementById('feedEditModalBackdrop');
     const feedEditAttractionEl = document.getElementById('feedEditAttraction');
@@ -1067,13 +1343,19 @@
       const itemId = parseItemId(item.id);
       const isHeartSelected = itemId !== null && selectedHeartIds.has(itemId);
       const imageHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.attraction_name}" class="post-image" />` : `<div class="post-image" style="background: linear-gradient(135deg, #e9f2ff, #dfeeff); display: flex; align-items: center; justify-content: center; color: #5a7ea1;">이미지 없음</div>`;
+      const disablePrevAttr = currentFeedIndex === 0 ? 'disabled' : '';
+      const disableNextAttr = currentFeedIndex === currentFeedItems.length - 1 ? 'disabled' : '';
+      const detailText = (item.detail || '').trim() || '상세 설명이 없습니다.';
       return `
         <div class="post-card" data-id="${item.id}" role="button" tabindex="0">
-          ${imageHtml}
+          <div class="post-image-wrap">
+            ${imageHtml}
+            <button type="button" class="feed-nav-btn prev" data-step="-1" aria-label="이전 포스트" ${disablePrevAttr}>‹</button>
+            <button type="button" class="feed-nav-btn next" data-step="1" aria-label="다음 포스트" ${disableNextAttr}>›</button>
+          </div>
           <div class="post-content">
             <div class="post-title">${item.attraction_name}</div>
-            <div class="post-category">${item.category || '미분류'}</div>
-            <div class="post-address">${item.address || '주소 없음'}</div>
+            <div class="post-detail">${detailText}</div>
             <div class="post-actions">
               <button type="button" class="post-action-btn post-heart-btn ${isHeartSelected ? 'active' : ''}" data-heart-id="${item.id}" aria-label="하트 선택">${isHeartSelected ? '❤' : '♡'}</button>
               <button type="button" class="page-link post-action-btn">지도보기</button>
@@ -1181,8 +1463,6 @@
 
     function syncFeedNavState() {
       tripFeedEl.innerHTML = currentFeedItems.length ? renderFeedCard(currentFeedItems[currentFeedIndex]) : '<div class="feed-empty">포스트가 없습니다.</div>';
-      feedPrevBtn.disabled = currentFeedIndex === 0;
-      feedNextBtn.disabled = currentFeedIndex === currentFeedItems.length - 1;
       if (currentFeedItems.length === 0) {
         feedSummaryEl.textContent = '0/0';
       } else {
@@ -1190,6 +1470,26 @@
       }
       const postCard = tripFeedEl.querySelector('.post-card');
       if (postCard) {
+        const navButtons = postCard.querySelectorAll('.feed-nav-btn[data-step]');
+        navButtons.forEach((button) => {
+          button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const step = parseInt(button.getAttribute('data-step') || '0', 10);
+            if (!Number.isNaN(step) && step !== 0) {
+              moveFeedCard(step);
+            }
+          });
+        });
+        const imageWrap = postCard.querySelector('.post-image-wrap');
+        if (imageWrap) {
+          imageWrap.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const rect = imageWrap.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const isRightHalf = clickX >= rect.width / 2;
+            moveFeedCard(isRightHalf ? 1 : -1);
+          });
+        }
         postCard.addEventListener('dblclick', () => openEditModal(currentFeedItems[currentFeedIndex]));
         const mapLink = postCard.querySelector('.post-action-btn.page-link');
         const heartBtn = postCard.querySelector('.post-heart-btn');
@@ -1308,34 +1608,61 @@
     }
 
     function saveEditModal() {
-      if (!editingItemId) return;
-      fetch('/api/update-location', {
-        method: 'POST',
+      const parsedId = parseItemId(editingItemId);
+      if (parsedId === null) return;
+
+      const idx = currentFeedItems.findIndex(item => parseItemId(item.id) === parsedId);
+      const currentItem = idx !== -1 ? currentFeedItems[idx] : null;
+
+      const payload = {
+        country: currentItem?.country || feedCountryEl.value,
+        city: currentItem?.city || feedCityEl.value,
+        attraction: feedEditAttractionEl.value,
+        category: feedEditCategoryEl.value,
+        latitude: feedEditLatitudeEl.value,
+        longitude: feedEditLongitudeEl.value,
+        address: feedEditAddressEl.value,
+        image_url: feedEditImageUrlEl.value,
+        detail: feedEditDetailEl.value,
+        maps_url: currentItem?.maps_url || '',
+      };
+
+      fetch(`/api/location-info/${parsedId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingItemId,
-          attraction_name: feedEditAttractionEl.value,
-          category: feedEditCategoryEl.value,
-          latitude: feedEditLatitudeEl.value,
-          longitude: feedEditLongitudeEl.value,
-          address: feedEditAddressEl.value,
-          image_url: feedEditImageUrlEl.value,
-          detail: feedEditDetailEl.value
-        })
+        body: JSON.stringify(payload)
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            const idx = currentFeedItems.findIndex(item => item.id === editingItemId);
-            if (idx !== -1) {
-              currentFeedItems[idx] = { ...currentFeedItems[idx], ...data.updated };
-              syncFeedNavState();
-              renderFeedMap(currentFeedItems);
-            }
-            closeEditModal();
+        .then(async (res) => {
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data.error || '저장에 실패했습니다.');
           }
+          return data;
         })
-        .catch(err => console.error('Save error:', err));
+        .then(() => {
+          if (idx !== -1) {
+            currentFeedItems[idx] = {
+              ...currentFeedItems[idx],
+              attraction_name: payload.attraction,
+              category: payload.category,
+              latitude: payload.latitude,
+              longitude: payload.longitude,
+              address: payload.address,
+              image_url: payload.image_url,
+              detail: payload.detail,
+              country: payload.country,
+              city: payload.city,
+            };
+            syncFeedNavState();
+            renderFeedMap(currentFeedItems);
+            syncMapMarkerToCurrentCard();
+          }
+          closeEditModal();
+        })
+        .catch((err) => {
+          console.error('Save error:', err);
+          alert(err.message || '저장에 실패했습니다.');
+        });
     }
 
     feedCountryEl.addEventListener('change', () => {
@@ -1343,8 +1670,13 @@
       loadFeedByLocation();
     });
     feedCityEl.addEventListener('change', loadFeedByLocation);
-    feedPrevBtn.addEventListener('click', () => moveFeedCard(-1));
-    feedNextBtn.addEventListener('click', () => moveFeedCard(1));
+    feedSearchBtnEl.addEventListener('click', loadFeedByLocation);
+    feedKeywordEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadFeedByLocation();
+      }
+    });
     feedEditModalBackdropEl.addEventListener('click', closeEditModal);
     feedEditCloseBtnEl.addEventListener('click', closeEditModal);
     feedEditSaveBtnEl.addEventListener('click', saveEditModal);
@@ -1404,6 +1736,7 @@
     async function loadFeedByLocation() {
       const country = feedCountryEl.value;
       const city = feedCityEl.value;
+      const keyword = (feedKeywordEl.value || '').trim();
       if (!country) {
         currentFeedItems = [];
         currentFeedIndex = 0;
@@ -1412,18 +1745,26 @@
         return;
       }
       try {
-        const url = city
-          ? `/api/location-info/list?country=${encodeURIComponent(country)}&city=${encodeURIComponent(city)}`
-          : `/api/location-info/list?country=${encodeURIComponent(country)}`;
+        const queryParts = [`country=${encodeURIComponent(country)}`];
+        if (city) {
+          queryParts.push(`city=${encodeURIComponent(city)}`);
+        }
+        if (keyword) {
+          queryParts.push(`keyword=${encodeURIComponent(keyword)}`);
+        }
+        const url = `/api/location-info/list?${queryParts.join('&')}`;
         const res = await fetch(url);
         const data = await res.json();
         const items = Array.isArray(data.items) ? data.items : [];
         currentFeedItems = items.map((item) => ({
           id: item.id,
+          country: item.country,
+          city: item.city,
           attraction_name: item.attraction,
           category: item.category,
           address: item.address,
           image_url: item.image_url,
+          maps_url: item.maps_url,
           detail: item.detail,
           latitude: item.latitude,
           longitude: item.longitude,
