@@ -1496,7 +1496,8 @@
         if (mapLink) {
           mapLink.addEventListener('click', (event) => {
             event.stopPropagation();
-            syncMapMarkerToCurrentCard();
+            const currentItem = currentFeedItems[currentFeedIndex];
+            openGoogleMapForItem(currentItem);
           });
         }
         if (heartBtn) {
@@ -1509,9 +1510,7 @@
           if (event.target.closest('button')) {
             return;
           }
-          if (mapLink) {
-            mapLink.click();
-          }
+          syncMapMarkerToCurrentCard();
         });
       }
     }
@@ -1567,6 +1566,43 @@
       updateMarkerIcons();
       feedMap.panTo(marker.getLatLng(), { animate: true });
       marker.openPopup();
+    }
+
+    function openGoogleMapForItem(item) {
+      if (!item) {
+        return;
+      }
+
+      const mapsUrl = String(item.maps_url || '').trim();
+      let targetUrl = '';
+
+      if (/^https?:\/\//i.test(mapsUrl)) {
+        targetUrl = mapsUrl;
+      } else {
+        const lat = parseCoordinate(item.latitude);
+        const lng = parseCoordinate(item.longitude);
+        if (lat !== null && lng !== null) {
+          targetUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        } else {
+          const query = [item.attraction_name, item.address]
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+            .join(' ');
+          if (query) {
+            targetUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+          }
+        }
+      }
+
+      if (targetUrl) {
+        const opened = window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        if (opened) {
+          opened.opener = null;
+        }
+      } else {
+        // 주소/좌표가 없으면 기존 지도 포커싱 동작으로 폴백
+        syncMapMarkerToCurrentCard();
+      }
     }
 
     function ensureFeedMap() {
