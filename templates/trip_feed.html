@@ -19,12 +19,18 @@
 
     body {
       margin: 0;
-      font-family: "Noto Serif KR", "Malgun Gothic", serif;
+      font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
       background:
         radial-gradient(circle at 15% 0%, #d8ecff 0%, rgba(216, 236, 255, 0) 42%),
         radial-gradient(circle at 88% 0%, #c7e2ff 0%, rgba(199, 226, 255, 0) 44%),
         linear-gradient(180deg, #eef7ff 0%, #dceeff 100%);
       color: #153454;
+    }
+    button,
+    input,
+    select,
+    textarea {
+      font-family: inherit;
     }
     .wrap {
       max-width: 960px;
@@ -61,6 +67,7 @@
     button.page-link {
       box-shadow: none;
       cursor: pointer;
+      font-family: inherit;
     }
     .page-link:hover {
       background: #dfeeff;
@@ -1358,7 +1365,8 @@
             <div class="post-detail">${detailText}</div>
             <div class="post-actions">
               <button type="button" class="post-action-btn post-heart-btn ${isHeartSelected ? 'active' : ''}" data-heart-id="${item.id}" aria-label="하트 선택">${isHeartSelected ? '❤' : '♡'}</button>
-              <button type="button" class="page-link post-action-btn">지도보기</button>
+              <button type="button" class="page-link post-action-btn post-map-btn">지도보기</button>
+              <button type="button" class="page-link post-action-btn post-chatgpt-btn">ChatGPT</button>
             </div>
           </div>
         </div>
@@ -1491,13 +1499,21 @@
           });
         }
         postCard.addEventListener('dblclick', () => openEditModal(currentFeedItems[currentFeedIndex]));
-        const mapLink = postCard.querySelector('.post-action-btn.page-link');
+        const mapLink = postCard.querySelector('.post-map-btn');
+        const chatgptBtn = postCard.querySelector('.post-chatgpt-btn');
         const heartBtn = postCard.querySelector('.post-heart-btn');
         if (mapLink) {
           mapLink.addEventListener('click', (event) => {
             event.stopPropagation();
             const currentItem = currentFeedItems[currentFeedIndex];
             openGoogleMapForItem(currentItem);
+          });
+        }
+        if (chatgptBtn) {
+          chatgptBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const currentItem = currentFeedItems[currentFeedIndex];
+            openChatGPTForItem(currentItem);
           });
         }
         if (heartBtn) {
@@ -1602,6 +1618,33 @@
       } else {
         // 주소/좌표가 없으면 기존 지도 포커싱 동작으로 폴백
         syncMapMarkerToCurrentCard();
+      }
+    }
+
+    function openChatGPTForItem(item) {
+      if (!item) {
+        return;
+      }
+
+      const title = String(item.attraction_name || '').trim();
+      const address = String(item.address || '').trim();
+      const city = String(item.city || '').trim();
+      const country = String(item.country || '').trim();
+
+      const searchTarget = [title, address, city, country]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+      if (!searchTarget) {
+        return;
+      }
+
+      const prompt = `${searchTarget} 관광지 정보를 찾아줘`;
+      const targetUrl = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
+      const opened = window.open(targetUrl, '_blank', 'noopener,noreferrer');
+      if (opened) {
+        opened.opener = null;
       }
     }
 

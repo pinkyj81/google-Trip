@@ -24,13 +24,19 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Georgia, "Malgun Gothic", serif;
+      font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
       color: var(--ink);
       background:
         radial-gradient(circle at top left, rgba(193, 102, 48, 0.18), transparent 28%),
         radial-gradient(circle at top right, rgba(19, 42, 19, 0.12), transparent 24%),
         linear-gradient(135deg, #f7f3ea 0%, #efe6da 52%, #e3dccf 100%);
       min-height: 100vh;
+    }
+    button,
+    input,
+    select,
+    textarea {
+      font-family: inherit;
     }
     .shell {
       width: min(1120px, calc(100% - 32px));
