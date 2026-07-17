@@ -16,6 +16,9 @@ load_dotenv(BASE_DIR / '.env')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'google-places-demo-secret')
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.jinja_env.auto_reload = True
 DB_SERVER = os.getenv('DB_SERVER', 'ms1901.gabiadb.com')
 DB_DATABASE = os.getenv('DB_DATABASE', 'yujincast')
 DB_USERNAME = os.getenv('DB_USERNAME', '')
@@ -1118,57 +1121,18 @@ def itinerary_page():
     return render_template('index.html')
 
 
+@app.route('/mobile-itinerary')
+def mobile_itinerary_page():
+    response = app.make_response(render_template('mobile_itinerary.html'))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 @app.route('/trip-info')
 def trip_info_page():
-    # 초기 국가/도시 데이터를 서버에서 제공해서 페이지 로드 시 바로 보여주기
-    try:
-        with _get_mssql_conn() as conn:
-            _ensure_location_option_table(conn)
-            cursor = conn.cursor()
-            cursor.execute(
-                '''
-                SELECT country, city
-                FROM (
-                    SELECT
-                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
-                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
-                    FROM dbo.LocationInfo
-                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
-                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
-
-                    UNION
-
-                    SELECT
-                        LTRIM(RTRIM(ISNULL([Country], ''))) AS country,
-                        LTRIM(RTRIM(ISNULL([City], ''))) AS city
-                    FROM dbo.location_info_options
-                    WHERE ISNULL(LTRIM(RTRIM([Country])), '') <> ''
-                      AND ISNULL(LTRIM(RTRIM([City])), '') <> ''
-                ) X
-                ORDER BY country, city
-                '''
-            )
-            rows = cursor.fetchall()
-
-        cities_by_country: dict[str, list[str]] = {}
-        for row in rows:
-            country = str(row.country or '').strip()
-            city = str(row.city or '').strip()
-            if not country or not city:
-                continue
-            cities = cities_by_country.setdefault(country, [])
-            if city not in cities:
-                cities.append(city)
-
-        countries = sorted(cities_by_country.keys(), key=lambda item: item.lower())
-        for key in list(cities_by_country.keys()):
-            cities_by_country[key] = sorted(cities_by_country[key], key=lambda item: item.lower())
-
-        initial_data = {'countries': countries, 'cities_by_country': cities_by_country}
-    except (RuntimeError, pyodbc.Error):
-        initial_data = {'countries': [], 'cities_by_country': {}}
-    
-    return render_template('trip_info.html', initial_data=initial_data)
+    return redirect(url_for('trip_feed_page'))
 
 
 @app.route('/trip-feed')
@@ -2706,17 +2670,66 @@ def place_photo():
     except ValueError:
         max_height = 360
 
-    photo_url = f'https://places.googleapis.com/v1/{photo_name}/media'
-
-    try:
-        response = requests.get(
+    def _fetch_photo_response(target_photo_name: str) -> requests.Response:
+        photo_url = f'https://places.googleapis.com/v1/{target_photo_name}/media'
+        return requests.get(
             photo_url,
             headers={'X-Goog-Api-Key': places_api_key},
             params={'maxHeightPx': max_height},
             timeout=20,
         )
+
+    def _extract_place_resource(target_photo_name: str) -> str:
+        value = str(target_photo_name or '').strip()
+        if not value.startswith('places/') or '/photos/' not in value:
+            return ''
+        return value.split('/photos/', 1)[0]
+
+    def _resolve_latest_photo_name_from_place(place_resource: str) -> str:
+        if not place_resource:
+            return ''
+
+        detail_url = f'https://places.googleapis.com/v1/{place_resource}'
+        detail_response = requests.get(
+            detail_url,
+            headers={
+                'X-Goog-Api-Key': places_api_key,
+                'X-Goog-FieldMask': 'photos.name',
+            },
+            timeout=20,
+        )
+        if detail_response.status_code >= 400:
+            return ''
+
+        try:
+            payload = detail_response.json()
+        except ValueError:
+            return ''
+
+        photos = payload.get('photos') or []
+        if not photos or not isinstance(photos[0], dict):
+            return ''
+
+        latest_name = str(photos[0].get('name') or '').strip()
+        if latest_name and '/photos/' in latest_name:
+            return latest_name
+        return ''
+
+    try:
+        response = _fetch_photo_response(photo_name)
     except requests.RequestException as exc:
         return jsonify({'error': f'사진 조회 실패: {exc}'}), 502
+
+    # Older stored photo_name tokens can expire; refresh via place resource and retry once.
+    if response.status_code == 400:
+        place_resource = _extract_place_resource(photo_name)
+        if place_resource:
+            try:
+                refreshed_photo_name = _resolve_latest_photo_name_from_place(place_resource)
+                if refreshed_photo_name and refreshed_photo_name != photo_name:
+                    response = _fetch_photo_response(refreshed_photo_name)
+            except requests.RequestException:
+                pass
 
     if response.status_code >= 400:
         try:

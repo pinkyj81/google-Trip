@@ -652,7 +652,7 @@
       <h1>여행 정보</h1>
       <p class="desc">LocationInfo 테이블에 데이터를 저장합니다.</p>
       <div class="page-link-row">
-        <button id="openTripPickerModalBtn" type="button" class="page-link">장소등록 팝업 열기</button>
+        <button id="openTripPickerModalBtn" type="button" class="page-link">+ 장소 추가</button>
         <a class="page-link" href="/trip-feed">인스타 피드 보기</a>
       </div>
 
@@ -760,7 +760,7 @@
             </div>
           </div>
 
-          <div class="google-result-wrap">
+          <div class="google-result-wrap" hidden>
             <div class="google-result-head">
               <span>Google 검색 결과</span>
               <span id="googleResultSummary">0건</span>
@@ -837,8 +837,8 @@
         </div>
       </div>
       <div class="trip-picker-mode-row">
-        <button id="tripPickerParseBtn" type="button" class="trip-picker-mode-btn">파싱하기</button>
-        <button id="tripPickerGoogleBtn" type="button" class="trip-picker-mode-btn">구글API</button>
+        <button id="tripPickerParseBtn" type="button" class="trip-picker-mode-btn">내가 찾은 정보넣기</button>
+        <button id="tripPickerGoogleBtn" type="button" class="trip-picker-mode-btn">구글에서 자동 정보넣기</button>
       </div>
       <p id="tripPickerNote" class="trip-picker-note">시작 방식을 선택하세요.</p>
       <div id="tripPickerParseSection" class="trip-picker-section" hidden>

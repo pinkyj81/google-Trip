@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>모바일 여행일정</title>
+  <style>
+    :root {
+      --bg: #eaf4ff;
+      --card: #ffffff;
+      --line: #d8e7fb;
+      --text: #103a66;
+      --muted: #5f7fa3;
+      --accent: #2a6ec8;
+      --dot: #3b82f6;
+      --shadow: 0 14px 34px rgba(28, 87, 146, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 8% 8%, #d9ebff 0%, rgba(217, 235, 255, 0) 42%),
+        radial-gradient(circle at 92% 10%, #d1e7ff 0%, rgba(209, 231, 255, 0) 40%),
+        linear-gradient(180deg, #f0f8ff 0%, #e3f1ff 100%);
+      color: var(--text);
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+      padding: 14px 12px 28px;
+    }
+
+    .page {
+      width: min(680px, 100%);
+      margin: 0 auto;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      border: 1px solid #bfd8f7;
+      color: #245e9e;
+      background: #f4f9ff;
+      border-radius: 12px;
+      height: 40px;
+      padding: 0 12px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .trip-select {
+      flex: 1;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid #bfd8f7;
+      background: #f9fcff;
+      color: #1d4f86;
+      padding: 0 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .day-card {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .day-head {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid #edf4ff;
+    }
+
+    .day-title {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.02em;
+      color: #143f6f;
+      font-weight: 800;
+    }
+
+    .day-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .meta-row {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: #345e8c;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .day-meta-single {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #345e8c;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .day-meta-single svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #f2f8ff;
+      border: 1px solid #d8e8fb;
+      border-radius: 999px;
+      padding: 4px 9px;
+    }
+
+    .meta-chip svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    .timeline {
+      position: relative;
+      margin: 10px 0 0;
+      padding: 2px 10px 14px 10px;
+    }
+
+    .slot {
+      position: relative;
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 10px;
+      padding: 8px 4px;
+      min-height: 90px;
+    }
+
+    .time {
+      position: relative;
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f2f57;
+      padding-top: 3px;
+      letter-spacing: -0.01em;
+    }
+
+    .time::before {
+      content: "";
+      position: absolute;
+      right: -7px;
+      top: 13px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--dot);
+      box-shadow: 0 0 0 2px #e7f1ff;
+      z-index: 2;
+    }
+
+    .time::after {
+      content: "";
+      position: absolute;
+      right: -3px;
+      top: 24px;
+      bottom: -34px;
+      width: 1.5px;
+      background: #d2e4fa;
+      z-index: 1;
+    }
+
+    .slot:last-child .time::after {
+      display: none;
+    }
+
+    .place-card {
+      display: grid;
+      grid-template-columns: 1fr 108px;
+      gap: 10px;
+      background: #f9fcff;
+      border: 1px solid #dceafc;
+      border-radius: 12px;
+      padding: 10px;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    }
+
+    .place-card:hover {
+      transform: translateY(-1px);
+      border-color: #bdd8fb;
+      box-shadow: 0 8px 18px rgba(42, 110, 200, 0.14);
+    }
+
+    .place-card:focus-visible {
+      outline: 2px solid #5d96e1;
+      outline-offset: 2px;
+    }
+
+    .place-name {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.15;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #102e54;
+      word-break: keep-all;
+    }
+
+    .place-note {
+      margin-top: 6px;
+      color: #5f7fa3;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.3;
+      min-height: 20px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .thumb {
+      width: 108px;
+      height: 82px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #dceafb 0%, #c9ddf7 100%);
+      border: 1px solid #d2e3f9;
+      display: block;
+    }
+
+    .thumb-empty {
+      width: 108px;
+      height: 82px;
+      border-radius: 10px;
+      border: 1px dashed #bdd5f2;
+      background: linear-gradient(135deg, #ebf4ff 0%, #dcecff 100%);
+    }
+
+    .empty,
+    .loading,
+    .error {
+      border: 1px solid #d0e2f8;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 14px;
+      color: #3e628c;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+    }
+
+    .error {
+      color: #8f3f4e;
+      border-color: #e9ccd4;
+      background: #fff7f9;
+    }
+
+    .detail-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      align-items: center;
+      padding: 12px;
+    }
+
+    .detail-modal[hidden] {
+      display: none;
+    }
+
+    .detail-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 34, 66, 0.42);
+    }
+
+    .detail-panel {
+      position: relative;
+      margin: 0 auto;
+      width: min(680px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid #cfe2fb;
+      background: #f8fcff;
+      box-shadow: 0 -12px 32px rgba(18, 62, 107, 0.22);
+      padding: 10px 10px 12px;
+    }
+
+    .detail-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .detail-title {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.25;
+      color: #103a66;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .detail-sub {
+      margin-top: 4px;
+      color: #4f76a0;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .detail-close {
+      border: 1px solid #c8ddf8;
+      background: #eff6ff;
+      color: #2b649f;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .detail-photo {
+      width: 100%;
+      height: min(46vh, 420px);
+      max-height: 420px;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid #cddff8;
+      background: linear-gradient(135deg, #ebf4ff 0%, #dcecff 100%);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 6px;
+    }
+
+    .detail-item {
+      background: #ffffff;
+      border: 1px solid #d6e6fb;
+      border-radius: 10px;
+      padding: 7px 9px;
+    }
+
+    .detail-label {
+      color: #4f76a0;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .detail-value {
+      color: #153d67;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .detail-link {
+      color: #1c62b0;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    @media (max-width: 520px) {
+      .day-title {
+        font-size: 20px;
+      }
+
+      .slot {
+        grid-template-columns: 64px 1fr;
+      }
+
+      .time {
+        font-size: 16px;
+      }
+
+      .place-card {
+        grid-template-columns: 1fr 92px;
+      }
+
+      .thumb,
+      .thumb-empty {
+        width: 92px;
+        height: 72px;
+      }
+
+      .place-name {
+        font-size: 18px;
+      }
+
+      .detail-panel {
+        max-height: 94vh;
+        padding: 8px 8px 10px;
+      }
+
+      .detail-title {
+        font-size: 17px;
+      }
+
+      .detail-sub {
+        font-size: 12px;
+      }
+
+      .detail-photo {
+        height: min(40vh, 300px);
+        max-height: 300px;
+      }
+
+      .detail-item {
+        padding: 6px 8px;
+      }
+
+      .detail-value {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="toolbar">
+      <a class="back-link" href="/itinerary" aria-label="기존 일정 화면으로 돌아가기">← 일정</a>
+      <select id="tripSelect" class="trip-select" aria-label="여행 선택">
+        <option value="">여행 선택</option>
+      </select>
+    </div>
+
+    <section id="content" class="loading">여행 목록을 불러오는 중입니다...</section>
+  </main>
+
+  <aside id="detailModal" class="detail-modal" hidden aria-hidden="true">
+    <div id="detailBackdrop" class="detail-backdrop"></div>
+    <section class="detail-panel" role="dialog" aria-modal="true" aria-label="일정 상세 정보">
+      <div class="detail-head">
+        <div>
+          <h3 id="detailTitle" class="detail-title">일정 상세</h3>
+          <div id="detailSub" class="detail-sub"></div>
+        </div>
+        <button id="detailCloseBtn" type="button" class="detail-close" aria-label="닫기">×</button>
+      </div>
+      <img id="detailPhoto" class="detail-photo" alt="일정 장소 사진" hidden>
+      <div id="detailGrid" class="detail-grid"></div>
+    </section>
+  </aside>
+
+  <script>
+    const tripSelect = document.getElementById('tripSelect');
+    const content = document.getElementById('content');
+    const detailModal = document.getElementById('detailModal');
+    const detailBackdrop = document.getElementById('detailBackdrop');
+    const detailCloseBtn = document.getElementById('detailCloseBtn');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailSub = document.getElementById('detailSub');
+    const detailPhoto = document.getElementById('detailPhoto');
+    const detailGrid = document.getElementById('detailGrid');
+
+    let cachedTrips = [];
+    let currentTrip = null;
+    let currentScheduleItems = [];
+    let placePhotoById = new Map();
+    const searchPhotoCache = new Map();
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizeDate(value) {
+      const text = String(value || '').trim();
+      return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : text;
+    }
+
+    function normalizeTime(value) {
+      const text = String(value || '').trim();
+      const hit = text.match(/^(\d{1,2}):(\d{2})/);
+      if (!hit) {
+        return '10:00';
+      }
+      return `${String(hit[1]).padStart(2, '0')}:${hit[2]}`;
+    }
+
+    function parseTaggedNote(rawNote) {
+      const text = String(rawNote || '').trim();
+      if (!text) {
+        return { memo: '', photo: '', link: '' };
+      }
+
+      const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+      const memoLine = lines.find((line) => line.startsWith('[MEMO]'));
+      const photoLine = lines.find((line) => line.startsWith('[PHOTO]'));
+      const linkLine = lines.find((line) => line.startsWith('[LINK]'));
+
+      const photo = photoLine ? photoLine.replace(/^\[PHOTO\]/, '').trim() : '';
+      const link = linkLine ? linkLine.replace(/^\[LINK\]/, '').trim() : '';
+
+      if (memoLine) {
+        return {
+          memo: memoLine.replace(/^\[MEMO\]/, '').trim(),
+          photo,
+          link,
+        };
+      }
+
+      const filtered = lines.filter((line) => !line.startsWith('[LINK]') && !line.startsWith('[PHOTO]'));
+      return {
+        memo: filtered.join('\n'),
+        photo,
+        link,
+      };
+    }
+
+    function firstHttpUrl(text) {
+      const m = String(text || '').match(/https?:\/\/[^\s<>\"]+/i);
+      return m ? String(m[0]).trim() : '';
+    }
+
+    function toDisplayPhotoUrl(rawUrl) {
+      const text = String(rawUrl || '').trim();
+      if (!text) {
+        return '';
+      }
+
+      if (text.startsWith('/api/place-photo') || text.startsWith('/api/external-image')) {
+        return text;
+      }
+      if (text.startsWith('data:') || text.startsWith('blob:')) {
+        return text;
+      }
+      if (text.startsWith('//')) {
+        return `/api/external-image?url=${encodeURIComponent(`https:${text}`)}`;
+      }
+      if (text.startsWith('http://') || text.startsWith('https://')) {
+        return `/api/external-image?url=${encodeURIComponent(text)}`;
+      }
+      if (text.startsWith('/')) {
+        return text;
+      }
+      return '';
+    }
+
+    async function fetchFirstPhotoFromQuery(queryText) {
+      const query = String(queryText || '').trim();
+      if (!query) {
+        return '';
+      }
+
+      if (searchPhotoCache.has(query)) {
+        return searchPhotoCache.get(query) || '';
+      }
+
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            search_mode: 'text',
+            max_rows: 8
+          })
+        });
+
+        if (!response.ok) {
+          searchPhotoCache.set(query, '');
+          return '';
+        }
+
+        const data = await readApiData(response);
+        const places = Array.isArray(data?.places) ? data.places : [];
+        const found = String((places.find((p) => p?.photoUrl)?.photoUrl) || '').trim();
+        const proxied = toDisplayPhotoUrl(found);
+        searchPhotoCache.set(query, proxied);
+        return proxied;
+      } catch {
+        searchPhotoCache.set(query, '');
+        return '';
+      }
+    }
+
+    function toDurationLabel(startDate, endDate) {
+      const s = new Date(String(startDate || '').trim());
+      const e = new Date(String(endDate || '').trim());
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
+        return '';
+      }
+      const ms = e.getTime() - s.getTime();
+      const days = Math.max(1, Math.floor(ms / 86400000) + 1);
+      return `${days}일`;
+    }
+
+    function toKoreanDate(yyyyMMdd) {
+      const text = normalizeDate(yyyyMMdd);
+      const m = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) {
+        return text;
+      }
+      return `${Number(m[2])}월 ${Number(m[3])}일`;
+    }
+
+    function closeDetailModal() {
+      detailModal.hidden = true;
+      detailModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openDetailModal(scheduleId) {
+      const idNum = Number(scheduleId);
+      const item = currentScheduleItems.find((row) => Number(row.id) === idNum);
+      if (!item) {
+        return;
+      }
+
+      const parsed = parseTaggedNote(item.note || '');
+      const photoUrl = getItemPhoto(item);
+      const dateText = toKoreanDate(item.schedule_date);
+      const scheduleTime = normalizeTime(item.schedule_time);
+
+      detailTitle.textContent = String(item.place_name || '일정 상세');
+      detailSub.textContent = `${dateText} ${scheduleTime}`;
+
+      if (photoUrl) {
+        detailPhoto.src = photoUrl;
+        detailPhoto.hidden = false;
+      } else {
+        detailPhoto.hidden = true;
+        detailPhoto.removeAttribute('src');
+      }
+
+      const memoText = String(parsed.memo || '').trim() || '메모 없음';
+      const addressText = String(item.formatted_address || '').trim() || '주소 정보 없음';
+      const mapsText = String(parsed.link || item.google_maps_uri || '').trim();
+
+      detailGrid.innerHTML = `
+        <article class="detail-item">
+          <div class="detail-label">주소</div>
+          <div class="detail-value">${escapeHtml(addressText)}</div>
+        </article>
+        <article class="detail-item">
+          <div class="detail-label">메모</div>
+          <div class="detail-value">${escapeHtml(memoText)}</div>
+        </article>
+        <article class="detail-item">
+          <div class="detail-label">링크</div>
+          <div class="detail-value">${mapsText ? `<a class="detail-link" href="${escapeHtml(mapsText)}" target="_blank" rel="noopener noreferrer">Google Maps 열기</a>` : '링크 없음'}</div>
+        </article>
+      `;
+
+      detailModal.hidden = false;
+      detailModal.setAttribute('aria-hidden', 'false');
+    }
+
+    async function readApiData(response) {
+      const contentType = (response.headers.get('content-type') || '').toLowerCase();
+      const raw = await response.text();
+
+      if (contentType.includes('application/json')) {
+        return raw ? JSON.parse(raw) : {};
+      }
+
+      const preview = String(raw || '').replace(/\s+/g, ' ').slice(0, 180);
+      throw new Error(`JSON이 아닌 응답입니다 (${response.status}) ${preview}`);
+    }
+
+    async function loadTrips() {
+      const response = await fetch('/api/trips');
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '여행 목록 조회 실패');
+      }
+      return Array.isArray(data.trips) ? data.trips : [];
+    }
+
+    async function loadTripSchedule(tripId) {
+      const response = await fetch(`/api/trip-schedule?trip_id=${encodeURIComponent(tripId)}`);
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '일정 조회 실패');
+      }
+      return {
+        days: Array.isArray(data.days) ? data.days : [],
+        schedule: Array.isArray(data.schedule) ? data.schedule : []
+      };
+    }
+
+    async function loadTripPlaces(tripId) {
+      const response = await fetch(`/api/trip-places?trip_id=${encodeURIComponent(tripId)}`);
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '장소 조회 실패');
+      }
+      return Array.isArray(data.places) ? data.places : [];
+    }
+
+    async function buildPlacePhotoMap(tripId) {
+      const rows = await loadTripPlaces(tripId);
+      placePhotoById = new Map();
+      rows.forEach((place) => {
+        const parsed = parseTaggedNote(place.memo || '');
+        const rawPhoto = String(parsed.photo || '').trim() || firstHttpUrl(place.memo || '');
+        const photoUrl = toDisplayPhotoUrl(rawPhoto);
+        if (photoUrl) {
+          placePhotoById.set(Number(place.id), photoUrl);
+        }
+      });
+    }
+
+    function getItemPhoto(item) {
+      const resolved = String(item?._resolvedPhoto || '').trim();
+      if (resolved) {
+        return resolved;
+      }
+
+      const parsed = parseTaggedNote(item.note || '');
+      const notePhoto = toDisplayPhotoUrl(String(parsed.photo || '').trim() || firstHttpUrl(item.note || ''));
+      if (notePhoto) {
+        return notePhoto;
+      }
+
+      const byPlace = placePhotoById.get(Number(item.trip_place_id));
+      if (byPlace) {
+        return byPlace;
+      }
+      return '';
+    }
+
+    async function enrichMissingPhotos(scheduleRows) {
+      for (const item of (scheduleRows || [])) {
+        const existing = getItemPhoto(item);
+        if (existing) {
+          item._resolvedPhoto = existing;
+          continue;
+        }
+
+        const key = `${String(item.place_name || '').trim()}|${String(item.formatted_address || '').trim()}`;
+        if (!key || key === '|') {
+          item._resolvedPhoto = '';
+          continue;
+        }
+
+        const query = [item.place_name, item.formatted_address]
+          .map((v) => String(v || '').trim())
+          .filter(Boolean)
+          .join(' ');
+
+        item._resolvedPhoto = await fetchFirstPhotoFromQuery(query);
+      }
+    }
+
+    function renderTimelineDay(trip, day, items) {
+      const dateTitle = toKoreanDate(day);
+
+      const slots = items
+        .slice()
+        .sort((a, b) => normalizeTime(a.schedule_time).localeCompare(normalizeTime(b.schedule_time)))
+        .map((item) => {
+          const parsed = parseTaggedNote(item.note || '');
+          const memo = String(parsed.memo || '').trim();
+          const photoUrl = getItemPhoto(item);
+          const imgHtml = photoUrl
+            ? `<img class="thumb" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(item.place_name || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.hidden=false;">` +
+              '<div class="thumb-empty" hidden></div>'
+            : '<div class="thumb-empty"></div>';
+
+          return `
+            <article class="slot">
+              <div class="time">${escapeHtml(normalizeTime(item.schedule_time))}</div>
+              <div class="place-card js-open-detail" data-schedule-id="${escapeHtml(String(item.id || ''))}" role="button" tabindex="0" aria-label="${escapeHtml(item.place_name || '일정 상세')} 상세 보기">
+                <div>
+                  <h3 class="place-name">${escapeHtml(item.place_name || '이름 없음')}</h3>
+                  <div class="place-note">${escapeHtml(memo || item.formatted_address || '일정 메모 없음')}</div>
+                </div>
+                <div>${imgHtml}</div>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+
+      return `
+        <section class="day-card">
+          <header class="day-head">
+            <h2 class="day-title">${escapeHtml(trip.title || '내 여행')} · ${escapeHtml(dateTitle)}</h2>
+            <div class="day-sub">${escapeHtml(trip.start_date || '')} ~ ${escapeHtml(trip.end_date || '')}</div>
+            <div class="day-meta-single">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M8 2v4" />
+                <path d="M16 2v4" />
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M3 10h18" />
+                <path d="M8 14h.01" />
+                <path d="M12 14h.01" />
+                <path d="M16 14h.01" />
+              </svg>
+              일정 ${escapeHtml(String(trip.schedule_count || 0))}개
+            </div>
+          </header>
+          <div class="timeline">
+            ${slots}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderTripTimeline(trip, scheduleRows) {
+      if (!scheduleRows.length) {
+        content.className = 'empty';
+        content.textContent = '등록된 일정이 없습니다. 일정 화면에서 장소를 시간표에 배정해 주세요.';
+        return;
+      }
+
+      const grouped = new Map();
+      scheduleRows.forEach((row) => {
+        const key = normalizeDate(row.schedule_date);
+        if (!grouped.has(key)) {
+          grouped.set(key, []);
+        }
+        grouped.get(key).push(row);
+      });
+
+      const days = Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b));
+      currentTrip = trip;
+      currentScheduleItems = (scheduleRows || []).slice();
+      content.className = '';
+      content.innerHTML = days.map((day) => renderTimelineDay(trip, day, grouped.get(day))).join('');
+    }
+
+    async function renderSelectedTrip(tripId) {
+      if (!tripId) {
+        content.className = 'empty';
+        content.textContent = '여행을 선택하면 모바일 일정표가 표시됩니다.';
+        return;
+      }
+
+      const trip = cachedTrips.find((item) => String(item.id) === String(tripId));
+      if (!trip) {
+        content.className = 'error';
+        content.textContent = '선택한 여행 정보를 찾지 못했습니다.';
+        return;
+      }
+
+      content.className = 'loading';
+      content.textContent = '일정을 불러오는 중입니다...';
+
+      try {
+        await buildPlacePhotoMap(tripId);
+        const data = await loadTripSchedule(tripId);
+        await enrichMissingPhotos(data.schedule || []);
+        renderTripTimeline(trip, data.schedule || []);
+      } catch (error) {
+        content.className = 'error';
+        content.textContent = error.message || '일정을 불러오지 못했습니다.';
+      }
+    }
+
+    function setTripOptions(trips) {
+      tripSelect.innerHTML = '<option value="">여행 선택</option>';
+      trips.forEach((trip) => {
+        const option = document.createElement('option');
+        option.value = String(trip.id);
+        option.textContent = `${trip.title} (${trip.start_date}~${trip.end_date})`;
+        tripSelect.appendChild(option);
+      });
+    }
+
+    (async () => {
+      try {
+        cachedTrips = await loadTrips();
+        setTripOptions(cachedTrips);
+
+        if (!cachedTrips.length) {
+          content.className = 'empty';
+          content.textContent = '먼저 여행을 생성해 주세요.';
+          return;
+        }
+
+        const query = new URLSearchParams(window.location.search);
+        const requestedTripId = query.get('trip_id') || '';
+        const selected = cachedTrips.some((trip) => String(trip.id) === requestedTripId)
+          ? requestedTripId
+          : String(cachedTrips[0].id);
+
+        tripSelect.value = selected;
+        await renderSelectedTrip(selected);
+      } catch (error) {
+        content.className = 'error';
+        content.textContent = error.message || '화면을 초기화하지 못했습니다.';
+      }
+    })();
+
+    tripSelect.addEventListener('change', async () => {
+      await renderSelectedTrip(tripSelect.value);
+    });
+
+    content.addEventListener('click', (event) => {
+      const card = event.target.closest('.js-open-detail');
+      if (!card) {
+        return;
+      }
+      const scheduleId = card.getAttribute('data-schedule-id') || '';
+      openDetailModal(scheduleId);
+    });
+
+    content.addEventListener('keydown', (event) => {
+      const card = event.target.closest('.js-open-detail');
+      if (!card) {
+        return;
+      }
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
+      event.preventDefault();
+      openDetailModal(card.getAttribute('data-schedule-id') || '');
+    });
+
+    detailCloseBtn.addEventListener('click', closeDetailModal);
+    detailBackdrop.addEventListener('click', closeDetailModal);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !detailModal.hidden) {
+        closeDetailModal();
+      }
+    });
+  </script>
+</body>
+</html>

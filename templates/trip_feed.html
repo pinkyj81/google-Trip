@@ -33,15 +33,18 @@
       font-family: inherit;
     }
     .wrap {
-      max-width: 960px;
-      margin: 40px auto;
-      padding: 0 16px;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0;
     }
     .card {
       background: rgba(255, 255, 255, 0.86);
       border: 1px solid #bcd8f5;
       border-radius: 16px;
       padding: 24px;
+      width: 100%;
+      min-height: 100vh;
       box-shadow: 0 14px 30px rgba(33, 88, 146, 0.14);
       backdrop-filter: blur(3px);
     }
@@ -49,8 +52,31 @@
       margin: 0;
       font-size: 28px;
       color: #0f4f8a;
-      display: inline-block;
-      margin-right: 12px;
+    }
+    .title-image {
+      max-height: 72px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .title-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .title-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .page-link {
       display: inline-flex;
@@ -71,6 +97,39 @@
     }
     .page-link:hover {
       background: #dfeeff;
+    }
+    #feedOpenPickerBtn {
+      padding: 14px 22px;
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f4f9a;
+      background: #dcecff;
+      border: 1px solid #8fb8e6;
+      border-radius: 16px;
+      box-shadow: 0 6px 14px rgba(24, 78, 143, 0.14);
+    }
+    #feedOpenPickerBtn:hover {
+      background: #cfe4ff;
+      border-color: #7aa8de;
+    }
+    .title-nav-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 16px;
+      font-size: 16px;
+      font-weight: 800;
+      color: #1b5ea7;
+    }
+    .title-nav-link svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
     }
     .desc {
       margin: 8px 0 0;
@@ -159,9 +218,9 @@
       position: relative;
       flex: 1;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
       min-height: 450px;
       background: #fafdff;
       border: 1px solid #cfe1f4;
@@ -171,9 +230,10 @@
     }
     .feed-grid {
       display: flex;
-      justify-content: center;
-      align-items: center;
+      justify-content: stretch;
+      align-items: stretch;
       width: 100%;
+      height: 100%;
     }
     .feed-empty {
       color: #5a7ea1;
@@ -212,14 +272,17 @@
       right: 12px;
     }
     .post-card {
-      width: min(100%, 420px);
-      max-width: 100%;
+      width: 100%;
+      max-width: none;
+      height: 100%;
       background: #fff;
-      border: 1px solid #d4e3f0;
-      border-radius: 12px;
+      border: 0;
+      border-radius: 0;
       overflow: hidden;
       cursor: pointer;
       transition: transform 0.15s, box-shadow 0.15s;
+      display: flex;
+      flex-direction: column;
     }
     .post-card:hover {
       transform: scale(1.02);
@@ -251,6 +314,9 @@
     }
     .post-content {
       padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
     }
     .post-title {
       margin: 0 0 6px;
@@ -286,7 +352,7 @@
       word-break: keep-all;
     }
     .post-actions {
-      margin-top: 12px;
+      margin-top: auto;
       display: flex;
       justify-content: flex-end;
       gap: 8px;
@@ -376,7 +442,7 @@
     }
     .edit-grid {
       display: grid;
-      gap: 12px;
+      gap: 8px;
     }
     .edit-grid-2 {
       display: grid;
@@ -386,15 +452,19 @@
     .edit-grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 8px;
     }
     .edit-grid input,
     .edit-grid select,
+    .edit-grid-2 input,
+    .edit-grid-2 select,
+    .edit-grid-3 input,
+    .edit-grid-3 select,
     .edit-grid textarea {
       width: 100%;
       border: 1px solid #bcd8f5;
       border-radius: 10px;
-      padding: 10px 11px;
+      padding: 8px 10px;
       font-size: 14px;
       background: #f7fbff;
       color: #1f4e7f;
@@ -421,7 +491,7 @@
         padding: 0;
       }
       .feed-carousel-shell {
-        padding: 12px;
+        padding: 0;
       }
       .feed-nav-btn {
         width: 36px;
@@ -435,8 +505,8 @@
         right: 8px;
       }
       .post-card {
-        width: min(86vw, 320px);
-        flex-basis: min(86vw, 320px);
+        width: 100%;
+        flex-basis: 100%;
       }
       .edit-grid-2,
       .edit-grid-3 {
@@ -463,12 +533,12 @@
     .modal-panel {
       position: relative;
       width: min(760px, 100%);
-      max-height: calc(100vh - 32px);
+      max-height: calc(100vh - 20px);
       border: 1px solid #bcd8f5;
       border-radius: 18px;
       background: rgba(247, 251, 255, 0.98);
       box-shadow: 0 16px 36px rgba(22, 74, 125, 0.24);
-      padding: 16px;
+      padding: 12px;
       overflow: auto;
     }
     .modal-head {
@@ -476,7 +546,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
     .modal-title {
       margin: 0;
@@ -504,18 +574,53 @@
       cursor: pointer;
     }
     .modal-note {
-      margin-top: 10px;
+      margin-top: 6px;
       color: #426f98;
-      font-size: 17px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
   <main class="wrap">
     <section class="card">
-      <h1>여행 피드</h1>
-      <button id="feedOpenPickerBtn" type="button" class="page-link">장소등록 팝업 열기</button>
-      <a class="page-link" href="/trip-info">여행 정보 입력하기</a>
+      <div class="title-row">
+        <div class="title-left">
+          <div>
+            <img
+              src="/static/trip_feed_title.png"
+              alt="여행 피드"
+              class="title-image"
+              onload="document.getElementById('tripFeedTitleText').style.display='none';"
+              onerror="this.style.display='none'; document.getElementById('tripFeedTitleText').style.display='block';"
+            />
+            <h1 id="tripFeedTitleText">여행 피드</h1>
+          </div>
+          <button id="feedOpenPickerBtn" type="button" class="page-link">+ 장소 추가</button>
+        </div>
+        <div class="title-actions">
+          <a class="page-link title-nav-link" href="/">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V21h14V9.5" />
+              <path d="M9 21v-6h6v6" />
+            </svg>
+            <span>Home</span>
+          </a>
+          <a class="page-link title-nav-link" href="/itinerary">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path d="M8 2v4" />
+              <path d="M16 2v4" />
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M3 10h18" />
+              <path d="M8 14h.01" />
+              <path d="M12 14h.01" />
+              <path d="M16 14h.01" />
+            </svg>
+            <span>My itinerary</span>
+          </a>
+        </div>
+      </div>
+      <p class="desc">전 세계 여행지를 검색하고 나만의 여행을 만들어보세요.</p>
 
       <div class="combo-grid">
         <div>
@@ -629,12 +734,12 @@
           <button id="feedPickerCloseBtn" type="button" class="modal-close" aria-label="닫기">×</button>
         </div>
       </div>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;">
-        <button id="feedPickerParseBtn" type="button" class="page-link" style="display: inline-flex; padding: 10px 16px; text-decoration: none; border-radius: 10px; border: 0;">파싱하기</button>
-        <button id="feedPickerGoogleBtn" type="button" class="page-link" style="display: inline-flex; padding: 10px 16px; text-decoration: none; border-radius: 10px; border: 0;">구글API</button>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+        <button id="feedPickerParseBtn" type="button" class="page-link" style="display: inline-flex; padding: 10px 16px; text-decoration: none; border-radius: 10px; border: 0;">내가 찾은 정보넣기</button>
+        <button id="feedPickerGoogleBtn" type="button" class="page-link" style="display: inline-flex; padding: 10px 16px; text-decoration: none; border-radius: 10px; border: 0;">구글에서 자동 정보넣기</button>
       </div>
       <p id="feedPickerNote" class="modal-note">시작 방식을 선택하세요.</p>
-      <div id="feedPickerParseSection" style="display: none; border: 1px solid #bcd8f5; border-radius: 12px; padding: 12px; background: rgba(240, 247, 255, 0.65);">
+      <div id="feedPickerParseSection" style="display: none; border: 1px solid #bcd8f5; border-radius: 12px; padding: 10px; background: rgba(240, 247, 255, 0.65);">
         <div class="edit-grid">
           <div>
             <label for="feedPickerParseMapsUrl">구글맵스 링크</label>
@@ -689,7 +794,7 @@
           <div id="feedPickerParseStatus" class="edit-mini-note">구글맵스 링크를 붙여넣고 링크 파싱을 누르세요.</div>
         </div>
       </div>
-      <div id="feedPickerGoogleSection" style="display: none; border: 1px solid #bcd8f5; border-radius: 12px; padding: 12px; background: rgba(240, 247, 255, 0.65);">
+      <div id="feedPickerGoogleSection" style="display: none; border: 1px solid #bcd8f5; border-radius: 12px; padding: 10px; background: rgba(240, 247, 255, 0.65);">
         <div class="edit-grid-3">
           <div>
             <label for="feedPickerGoogleCountry">국가 선택</label>
@@ -746,11 +851,11 @@
             </select>
           </div>
         </div>
-        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+        <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
           <button id="runFeedPickerGoogleSearchBtn" type="button" class="page-link" style="border: 0;">검색</button>
         </div>
 
-        <div style="margin-top: 10px; border: 1px solid #bcd8f5; border-radius: 12px; overflow: hidden;">
+        <div style="margin-top: 6px; border: 1px solid #bcd8f5; border-radius: 12px; overflow: hidden;">
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #e8f2ff; color: #215689; font-weight: 700;">
             <span>검색 피드</span>
             <div style="display: inline-flex; align-items: center; gap: 10px;">
@@ -761,7 +866,7 @@
               <span id="feedPickerFeedSummary">0건</span>
             </div>
           </div>
-          <div id="feedPickerFeedGrid" style="padding: 12px; display: grid; gap: 10px; max-height: 280px; overflow: auto; background: rgba(250, 253, 255, 0.8);">
+          <div id="feedPickerFeedGrid" style="padding: 10px; display: grid; gap: 8px; max-height: 220px; overflow: auto; background: rgba(250, 253, 255, 0.8);">
             <div style="border: 1px dashed #a8c8ee; border-radius: 12px; color: #5278a1; padding: 16px; text-align: center;">검색 결과가 여기에 표시됩니다.</div>
           </div>
         </div>
