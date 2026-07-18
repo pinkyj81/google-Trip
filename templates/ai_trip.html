@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI로 여행만들기</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 15% 0%, #d8ecff 0%, rgba(216, 236, 255, 0) 42%),
+        radial-gradient(circle at 88% 0%, #c7e2ff 0%, rgba(199, 226, 255, 0) 44%),
+        linear-gradient(180deg, #eef7ff 0%, #dceeff 100%);
+      color: #153454;
+    }
+
+    .wrap {
+      width: min(1180px, calc(100% - 28px));
+      margin: 24px auto 40px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid #bcd8f5;
+      border-radius: 18px;
+      box-shadow: 0 14px 30px rgba(33, 88, 146, 0.14);
+      backdrop-filter: blur(3px);
+      padding: 22px;
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      color: #0f4f8a;
+    }
+
+    .desc {
+      margin: 0 0 16px;
+      color: #2f628e;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .page-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1f5fb5;
+      background: #e9f2ff;
+      border: 1px solid #bcd8f5;
+    }
+
+    .page-link:hover {
+      background: #dfeeff;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 280px;
+      border: 1px solid #bcd8f5;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      font-family: Consolas, "Noto Sans KR", "Malgun Gothic", monospace;
+      background: #fcfeff;
+      color: #153454;
+    }
+
+    textarea:focus {
+      outline: 2px solid rgba(31, 95, 181, 0.22);
+      border-color: #7aa8e6;
+    }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #2f78d8 0%, #1f5fb5 100%);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .secondary {
+      background: linear-gradient(135deg, #6a809a 0%, #4d657f 100%);
+    }
+
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #2f628e;
+      min-height: 20px;
+    }
+
+    .table-wrap {
+      margin-top: 16px;
+      overflow: auto;
+      border: 1px solid #bcd8f5;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #e6eef9;
+      text-align: left;
+      padding: 10px 12px;
+      vertical-align: top;
+      white-space: pre-line;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f0f6ff;
+      color: #184f8f;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .result-meta {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #45688d;
+    }
+
+    @media (max-width: 700px) {
+      h1 {
+        font-size: 23px;
+      }
+
+      textarea {
+        min-height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <div class="title-row">
+        <h1>AI로 여행만들기</h1>
+        <a class="page-link" href="/">Home</a>
+      </div>
+      <p class="desc">표 복사 내용을 아래에 붙여넣고 파싱 버튼을 누르면 일정 표로 변환됩니다. 탭(엑셀/표 복사) 형식과 마크다운 표를 지원합니다.</p>
+
+      <textarea id="tableInput" placeholder="예시)
+Day	시간	일정	추천 음식	예상 비용(1인)	구글맵
+1일차	오전	인천 → 상하이 푸동 공항 도착\n호텔 이동 및 체크인	-	항공권 제외	푸동공항 지도
+1일차	점심	난징동루(南京东路) 산책 및 점심	샤오롱바오	¥80~120	난징동루 지도"></textarea>
+
+      <div class="actions">
+        <button id="parseBtn" type="button">표 파싱하기</button>
+        <button id="clearBtn" type="button" class="secondary">초기화</button>
+      </div>
+
+      <div id="status"></div>
+      <div id="resultMeta" class="result-meta"></div>
+
+      <div class="table-wrap">
+        <table id="resultTable" aria-label="파싱 결과 표">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>시간</th>
+              <th>일정</th>
+              <th>추천 음식</th>
+              <th>예상 비용(1인)</th>
+              <th>구글맵</th>
+            </tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const EXPECTED_FIELDS = ["day", "time", "schedule", "food", "cost", "map"];
+    const FIELD_LABELS = {
+      day: "Day",
+      time: "시간",
+      schedule: "일정",
+      food: "추천 음식",
+      cost: "예상 비용(1인)",
+      map: "구글맵",
+    };
+
+    function normalizeHeader(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[()\[\]{}:·,._-]/g, "");
+    }
+
+    function mapHeaderToField(header) {
+      const key = normalizeHeader(header);
+      if (["day", "일", "일차", "날짜", "days"].includes(key)) return "day";
+      if (["시간", "time", "타임"].includes(key)) return "time";
+      if (["일정", "스케줄", "코스", "schedule", "plan"].includes(key)) return "schedule";
+      if (["추천음식", "음식", "food", "meal"].includes(key)) return "food";
+      if (["예상비용1인", "예상비용", "비용", "price", "cost", "budget"].includes(key)) return "cost";
+      if (["구글맵", "지도", "map", "googlemap", "구글지도"].includes(key)) return "map";
+      return null;
+    }
+
+    function splitMarkdownRow(line) {
+      const parts = line.split("|");
+      if (parts.length <= 1) {
+        return [line.trim()];
+      }
+      return parts
+        .map((v) => v.trim())
+        .filter((_, i) => !(i === 0 && parts[0].trim() === "") && !(i === parts.length - 1 && parts[parts.length - 1].trim() === ""));
+    }
+
+    function parseMarkdownTable(raw) {
+      const lines = raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && line !== "```");
+
+      if (lines.length < 2) {
+        return null;
+      }
+
+      const headerIdx = lines.findIndex((line) => line.includes("|"));
+      if (headerIdx < 0 || headerIdx + 1 >= lines.length) {
+        return null;
+      }
+
+      const divider = lines[headerIdx + 1].replace(/\|/g, "").trim();
+      if (!/^[-:\s]+$/.test(divider)) {
+        return null;
+      }
+
+      const headers = splitMarkdownRow(lines[headerIdx]);
+      const rows = [];
+      for (let i = headerIdx + 2; i < lines.length; i += 1) {
+        if (!lines[i].includes("|")) continue;
+        const cols = splitMarkdownRow(lines[i]);
+        if (cols.every((v) => !v)) continue;
+        rows.push(cols);
+      }
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      return { headers, rows, mode: "markdown" };
+    }
+
+    function parseDelimitedTable(raw, delimiter) {
+      const lines = raw
+        .split(/\r?\n/)
+        .map((line) => line.replace(/\u00a0/g, " "))
+        .filter((line) => line.trim().length > 0);
+
+      if (lines.length < 2) {
+        return null;
+      }
+
+      const headers = lines[0].split(delimiter).map((v) => v.trim());
+      if (headers.length < 3) {
+        return null;
+      }
+
+      const headerCount = Math.min(headers.length, EXPECTED_FIELDS.length);
+      const rows = [];
+
+      for (let i = 1; i < lines.length; i += 1) {
+        const line = lines[i];
+        const cols = line.split(delimiter).map((v) => v.trim());
+
+        if (cols.length >= headerCount) {
+          const row = cols.slice(0, headerCount);
+          if (cols.length > headerCount) {
+            row[headerCount - 1] += " " + cols.slice(headerCount).join(" ");
+          }
+          rows.push(row);
+        } else if (rows.length > 0) {
+          const current = rows[rows.length - 1];
+          if (cols.length === 1) {
+            const scheduleIdx = Math.min(2, headerCount - 1);
+            current[scheduleIdx] = (current[scheduleIdx] ? current[scheduleIdx] + "\n" : "") + cols[0];
+          } else {
+            for (let j = 0; j < cols.length; j += 1) {
+              current[j] = (current[j] ? current[j] + "\n" : "") + cols[j];
+            }
+          }
+        }
+      }
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      return { headers: headers.slice(0, headerCount), rows, mode: delimiter === "\t" ? "tab" : "space" };
+    }
+
+    function parseFlexibleTable(raw) {
+      const md = parseMarkdownTable(raw);
+      if (md) return md;
+
+      const tab = parseDelimitedTable(raw, "\t");
+      if (tab) return tab;
+
+      const space = parseDelimitedTable(raw, /\s{2,}/);
+      if (space) return space;
+
+      return null;
+    }
+
+    function convertToObjects(parsed) {
+      const fieldByIndex = parsed.headers.map((header, idx) => mapHeaderToField(header) || EXPECTED_FIELDS[idx] || `extra_${idx}`);
+
+      return parsed.rows.map((row) => {
+        const item = {
+          day: "",
+          time: "",
+          schedule: "",
+          food: "",
+          cost: "",
+          map: "",
+        };
+
+        for (let i = 0; i < row.length; i += 1) {
+          const key = fieldByIndex[i] || `extra_${i}`;
+          item[key] = String(row[i] || "").trim();
+        }
+
+        return item;
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function renderTable(items) {
+      const body = document.getElementById("resultBody");
+      if (!items.length) {
+        body.innerHTML = "";
+        return;
+      }
+
+      body.innerHTML = items
+        .map((item) => {
+          return `
+            <tr>
+              <td>${escapeHtml(item.day)}</td>
+              <td>${escapeHtml(item.time)}</td>
+              <td>${escapeHtml(item.schedule)}</td>
+              <td>${escapeHtml(item.food)}</td>
+              <td>${escapeHtml(item.cost)}</td>
+              <td>${escapeHtml(item.map)}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+
+    function setStatus(message, isError) {
+      const el = document.getElementById("status");
+      el.textContent = message;
+      el.style.color = isError ? "#b32727" : "#2f628e";
+    }
+
+    document.getElementById("parseBtn").addEventListener("click", () => {
+      const input = document.getElementById("tableInput").value.trim();
+      if (!input) {
+        setStatus("먼저 표 내용을 붙여넣어 주세요.", true);
+        return;
+      }
+
+      const parsed = parseFlexibleTable(input);
+      if (!parsed) {
+        setStatus("표 형식을 인식하지 못했습니다. 표 전체를 다시 복사해 붙여넣어 주세요.", true);
+        return;
+      }
+
+      const items = convertToObjects(parsed);
+      renderTable(items);
+
+      document.getElementById("resultMeta").textContent = `파싱 완료: ${items.length}행 (${parsed.mode} 형식)`;
+      setStatus("파싱 성공", false);
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      document.getElementById("tableInput").value = "";
+      document.getElementById("resultBody").innerHTML = "";
+      document.getElementById("resultMeta").textContent = "";
+      setStatus("초기화 완료", false);
+    });
+  </script>
+</body>
+</html>

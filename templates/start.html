@@ -47,10 +47,12 @@
 
     .actions {
       margin-top: 28px;
-      display: flex;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
       gap: 16px;
-      flex-wrap: wrap;
+      width: min(100%, 460px);
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .action-btn {
@@ -108,8 +110,13 @@
         font-size: 30px;
       }
 
+      .actions {
+        grid-template-columns: 1fr;
+        width: min(100%, 280px);
+      }
+
       .action-btn {
-        width: min(84vw, 280px);
+        width: 100%;
       }
     }
   </style>
@@ -155,6 +162,16 @@
           </svg>
         </span>
         <span class="label">여행 정보 쌓기</span>
+      </a>
+      <a class="action-btn" href="/ai-trip">
+        <span class="emoji" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false">
+            <path d="M12 3v18" />
+            <path d="M3 12h18" />
+            <circle cx="12" cy="12" r="8" />
+          </svg>
+        </span>
+        <span class="label">AI로 여행만들기</span>
       </a>
     </div>
   </main>

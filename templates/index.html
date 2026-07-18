@@ -894,6 +894,104 @@
     .photo-picker-section[hidden] {
       display: none;
     }
+    #locationImportBox {
+      border: 1px solid #d6e5f8;
+      border-radius: 14px;
+      background: #f8fbff;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    #locationImportBox[hidden] {
+      display: none !important;
+    }
+    .location-import-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+    .location-import-filter-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #315e8f;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .location-import-filter-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #7b4bc4;
+      cursor: pointer;
+    }
+    .location-import-status {
+      font-size: 14px;
+      color: #315e8f;
+    }
+    .location-import-results {
+      display: grid;
+      gap: 8px;
+      max-height: 300px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+    .location-import-card {
+      border: 1px solid #d6e5f8;
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 10px;
+      display: grid;
+      gap: 4px;
+    }
+    .location-import-card.is-favorite {
+      border-color: #c9b4f4;
+      background: linear-gradient(180deg, #fcf9ff 0%, #f5efff 100%);
+      box-shadow: 0 10px 24px rgba(120, 82, 181, 0.12);
+    }
+    .location-import-card.active {
+      border-color: #2f78d8;
+      box-shadow: 0 0 0 2px rgba(47, 120, 216, 0.16);
+    }
+    .location-import-card.is-favorite.active {
+      border-color: #8d63d2;
+      box-shadow: 0 0 0 2px rgba(141, 99, 210, 0.18), 0 10px 24px rgba(120, 82, 181, 0.14);
+    }
+    .location-import-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .location-import-card-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #184c83;
+      line-height: 1.25;
+    }
+    .location-import-card.is-favorite .location-import-card-title {
+      color: #5f3aa5;
+    }
+    .favorite-heart {
+      color: #7b4bc4;
+      font-weight: 900;
+    }
+    .location-import-check {
+      width: 22px;
+      height: 22px;
+      accent-color: #2f78d8;
+      cursor: pointer;
+    }
+    .location-import-card-meta {
+      font-size: 13px;
+      color: #446a93;
+      line-height: 1.35;
+    }
+    @media (max-width: 900px) {
+      .location-import-grid {
+        grid-template-columns: 1fr;
+      }
+    }
     .modal-results {
       display: grid;
       gap: 10px;
@@ -1024,6 +1122,14 @@
       width: min(560px, calc(100% - 12px));
       background: #f8f4ec;
     }
+    #scheduleNoteModal .trip-manage-panel {
+      width: min(1280px, calc(100% - 20px));
+      max-height: calc(100vh - 24px);
+      padding: 12px 14px;
+    }
+    #scheduleNoteModal .modal-head {
+      margin-bottom: 6px;
+    }
     .trip-manage-panel .trip-create-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1070,6 +1176,17 @@
       gap: 10px;
       margin-top: 10px;
     }
+    .note-edit-layout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-items: start;
+    }
+    .note-edit-left {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
     .note-place-summary {
       display: grid;
       gap: 8px;
@@ -1086,12 +1203,6 @@
     }
     .note-place-summary-head strong {
       font-size: 16px;
-    }
-    .note-edit-toggle-btn {
-      padding: 6px 10px;
-      border-radius: 8px;
-      box-shadow: none;
-      font-size: 12px;
     }
     .note-place-summary-item {
       display: grid;
@@ -1130,9 +1241,31 @@
       border: 1px solid #ddd0bd;
       background: #f4f0e7;
     }
-    .note-preview-wrap {
+    .note-photo-preview-wrap {
       display: grid;
       gap: 6px;
+      border: 1px solid #e2d7c8;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.78);
+      padding: 12px;
+    }
+    .note-photo-preview-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #355070;
+    }
+    .note-photo-preview-status {
+      font-size: 13px;
+      color: #5f6757;
+    }
+    .note-photo-preview-img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #ddd0bd;
+      background: #f4f0e7;
     }
     .note-coord-edit {
       display: grid;
@@ -1148,35 +1281,73 @@
       gap: 8px;
     }
     .note-coord-save-btn {
-      justify-self: end;
-      padding: 9px 12px;
-      border-radius: 10px;
-      box-shadow: none;
-      font-size: 13px;
-    }
-    .note-preview {
-      border: 1px solid #e2d7c8;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.78);
-      padding: 12px;
-      min-height: 56px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      line-height: 1.5;
-      font-size: 14px;
-    }
-    .note-preview a {
-      color: #355070;
-      text-decoration: underline;
+      justify-self: stretch;
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(31, 95, 181, 0.18);
+      font-size: 16px;
+      font-weight: 800;
     }
     .note-link-actions {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
     }
     .note-link-open-btn {
       background: linear-gradient(135deg, #355070 0%, #29405a 100%);
       box-shadow: 0 14px 28px rgba(41, 64, 90, 0.2);
+    }
+    #scheduleNoteModal .note-link-row {
+      gap: 8px;
+      margin-top: 6px;
+    }
+    #scheduleNoteModal .note-edit-layout {
+      gap: 8px;
+    }
+    #scheduleNoteModal .note-place-summary {
+      order: 1;
+      padding: 10px;
+      gap: 6px;
+    }
+    #scheduleNoteModal .note-edit-left {
+      order: 2;
+      gap: 8px;
+    }
+    #scheduleNoteModal .note-photo-preview-wrap {
+      padding: 10px;
+      gap: 4px;
+    }
+    #scheduleNoteModal .note-photo-preview-img {
+      aspect-ratio: 4 / 5;
+      max-height: 520px;
+    }
+    #scheduleNoteModal .note-coord-edit {
+      padding: 10px;
+      gap: 6px;
+    }
+    #scheduleNoteModal .note-coord-edit label {
+      margin-bottom: 4px;
+    }
+    #scheduleNoteModal input,
+    #scheduleNoteModal select,
+    #scheduleNoteModal textarea {
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    #scheduleNoteModal #scheduleNoteMemo {
+      min-height: 88px;
+      max-height: 120px;
+    }
+    #scheduleNoteModal .note-link-actions {
+      gap: 6px;
+    }
+    #scheduleNoteModal .note-coord-save-btn,
+    #scheduleNoteModal .note-link-open-btn {
+      min-height: 42px;
+      padding: 10px 12px;
+      font-size: 15px;
     }
     .trip-modal-edit-btn,
     .trip-modal-delete-btn {
@@ -1357,8 +1528,7 @@
     body.blue-theme .picker-card,
     body.blue-theme .trip-modal-card,
     body.blue-theme .note-place-summary,
-    body.blue-theme .note-coord-edit,
-    body.blue-theme .note-preview {
+    body.blue-theme .note-coord-edit {
       background: #f8fbff;
       border-color: #cfe1f4;
     }
@@ -1407,6 +1577,9 @@
       }
       .planner-map-card .schedule-map {
         min-height: 320px;
+      }
+      .note-edit-layout {
+        grid-template-columns: 1fr;
       }
     }
     @media (max-width: 640px) {
@@ -1662,8 +1835,33 @@
         </div>
         <div class="photo-picker-mode-row">
           <button type="button" id="startParseModeBtn" class="photo-picker-mode-btn">내가 찾은 정보넣기</button>
-          <button type="button" id="startGoogleModeBtn" class="photo-picker-mode-btn">구글에서 자동 정보넣기</button>
+          <button type="button" id="startGoogleModeBtn" class="photo-picker-mode-btn">선택된 장소 불러오기</button>
         </div>
+        <section id="locationImportBox" hidden>
+          <div class="location-import-grid">
+            <div>
+              <label for="locationImportCountry">나라 선택</label>
+              <select id="locationImportCountry">
+                <option value="">나라를 선택하세요</option>
+              </select>
+            </div>
+            <div>
+              <label for="locationImportCity">도시 선택</label>
+              <select id="locationImportCity" disabled>
+                <option value="">도시를 선택하세요</option>
+              </select>
+            </div>
+            <button type="button" id="loadLocationImportBtn">불러오기</button>
+          </div>
+          <label class="location-import-filter-row" for="locationImportFavoritesOnly">
+            <input type="checkbox" id="locationImportFavoritesOnly" />
+            <span>좋아요 체크된것만 불러오기</span>
+          </label>
+          <div id="locationImportStatus" class="location-import-status">나라와 도시를 선택해 주세요.</div>
+          <div id="locationImportResults" class="location-import-results">
+            <div class="planner-item">불러오기 전입니다.</div>
+          </div>
+        </section>
         <div id="photoPickerStatus" class="note">시작 방식을 선택하세요.</div>
         <form id="photoPickerSearchForm" class="modal-form photo-picker-section" hidden>
           <div>
@@ -1807,63 +2005,70 @@
           <button type="button" id="closeScheduleNoteBtn" class="mini-btn cancel" aria-label="닫기">✕</button>
         </div>
         <div class="note-link-row">
-          <div class="note-place-summary">
-            <div class="note-place-summary-head">
-              <strong>기본정보</strong>
-              <button type="button" id="openScheduleEditBtn" class="note-edit-toggle-btn">수정</button>
-            </div>
-            <div id="scheduleNotePlaceSummary"></div>
-          </div>
-          <div id="schedulePlaceEditPanel" class="note-coord-edit" hidden>
-            <label>장소 정보 수정</label>
-            <div>
-              <label for="scheduleNotePlaceName">장소명</label>
-              <input id="scheduleNotePlaceName" placeholder="예: 콜로세움" />
-            </div>
-            <div>
-              <label for="scheduleNoteAddress">주소</label>
-              <input id="scheduleNoteAddress" placeholder="예: Rome, Italy" />
-            </div>
-            <div>
-              <label for="scheduleNoteMapsUri">구글맵 링크</label>
-              <input id="scheduleNoteMapsUri" placeholder="https://maps.google.com/..." />
-            </div>
-            <div>
-              <label for="scheduleNoteCategory">카테고리</label>
-              <select id="scheduleNoteCategory">
-                <option value="tourist_attraction">관광명소</option>
-                <option value="historical_landmark">랜드마크</option>
-                <option value="museum">박물관</option>
-                <option value="park">공원</option>
-                <option value="lodging">호텔/숙소</option>
-                <option value="restaurant">식당</option>
-                <option value="cafe">카페</option>
-                <option value="point_of_interest">기타</option>
-              </select>
-            </div>
-            <div class="note-coord-grid">
-              <div>
-                <label for="scheduleNoteLat">위도</label>
-                <input id="scheduleNoteLat" placeholder="예: 41.890214" />
+          <div class="note-edit-layout">
+            <div class="note-edit-left">
+              <div id="schedulePlaceEditPanel" class="note-coord-edit">
+                <label>장소 정보 수정</label>
+                <div>
+                  <label for="scheduleNotePlaceName">장소명</label>
+                  <input id="scheduleNotePlaceName" placeholder="예: 콜로세움" />
+                </div>
+                <div>
+                  <label for="scheduleNoteAddress">주소</label>
+                  <input id="scheduleNoteAddress" placeholder="예: Rome, Italy" />
+                </div>
+                <div>
+                  <label for="scheduleNoteMapsUri">구글맵 링크</label>
+                  <input id="scheduleNoteMapsUri" placeholder="https://maps.google.com/..." />
+                </div>
+                <div>
+                  <label for="scheduleNotePhotoUrl">이미지 링크</label>
+                  <input id="scheduleNotePhotoUrl" placeholder="https://.../image.jpg" />
+                </div>
+                <div>
+                  <label for="scheduleNoteCategory">카테고리</label>
+                  <select id="scheduleNoteCategory">
+                    <option value="tourist_attraction">관광명소</option>
+                    <option value="historical_landmark">랜드마크</option>
+                    <option value="museum">박물관</option>
+                    <option value="park">공원</option>
+                    <option value="lodging">호텔/숙소</option>
+                    <option value="restaurant">식당</option>
+                    <option value="cafe">카페</option>
+                    <option value="point_of_interest">기타</option>
+                  </select>
+                </div>
+                <div class="note-coord-grid">
+                  <div>
+                    <label for="scheduleNoteLat">위도</label>
+                    <input id="scheduleNoteLat" placeholder="예: 41.890214" />
+                  </div>
+                  <div>
+                    <label for="scheduleNoteLng">경도</label>
+                    <input id="scheduleNoteLng" placeholder="예: 12.492231" />
+                  </div>
+                </div>
               </div>
               <div>
-                <label for="scheduleNoteLng">경도</label>
-                <input id="scheduleNoteLng" placeholder="예: 12.492231" />
+                <label for="scheduleNoteMemo">메모</label>
+                <textarea id="scheduleNoteMemo" placeholder="메모를 입력하세요"></textarea>
               </div>
             </div>
-            <button type="button" id="saveScheduleCoordsBtn" class="note-coord-save-btn">장소 정보 저장</button>
-          </div>
-          <div>
-            <label for="scheduleNoteMemo">메모</label>
-            <textarea id="scheduleNoteMemo" placeholder="메모를 입력하세요"></textarea>
-          </div>
-          <div class="note-preview-wrap">
-            <label>메모 미리보기</label>
-            <div id="scheduleNotePreview" class="note-preview"></div>
+            <div class="note-place-summary">
+              <div class="note-place-summary-head">
+                <strong>이미지</strong>
+              </div>
+              <div id="scheduleNotePlaceSummary" hidden></div>
+              <div class="note-photo-preview-wrap">
+                <span class="note-photo-preview-label">이미지 미리보기</span>
+                <img id="scheduleNotePhotoPreview" class="note-photo-preview-img" alt="장소 이미지 미리보기" hidden>
+                <div id="scheduleNotePhotoPreviewStatus" class="note-photo-preview-status">사진 불러오는 중...</div>
+              </div>
+            </div>
           </div>
           <div class="note-link-actions">
-            <button type="button" id="saveScheduleNoteBtn">저장</button>
-            <button type="button" id="openScheduleLinkBtn" class="note-link-open-btn">메모 링크 열기</button>
+            <button type="button" id="openScheduleLinkBtn" class="note-link-open-btn">구글맵 바로가기</button>
+            <button type="button" id="saveScheduleCoordsBtn" class="note-coord-save-btn">저장</button>
           </div>
         </div>
       </div>
@@ -1922,6 +2127,13 @@
     const photoPickerSearchForm = document.getElementById('photoPickerSearchForm');
     const photoPickerStatus = document.getElementById('photoPickerStatus');
     const photoPickerResults = document.getElementById('photoPickerResults');
+    const locationImportBox = document.getElementById('locationImportBox');
+    const locationImportCountry = document.getElementById('locationImportCountry');
+    const locationImportCity = document.getElementById('locationImportCity');
+    const loadLocationImportBtn = document.getElementById('loadLocationImportBtn');
+    const locationImportFavoritesOnly = document.getElementById('locationImportFavoritesOnly');
+    const locationImportStatus = document.getElementById('locationImportStatus');
+    const locationImportResults = document.getElementById('locationImportResults');
     const manualPlaceBox = document.getElementById('manualPlaceBox');
     const manualPlaceName = document.getElementById('manualPlaceName');
     const manualPlaceAddress = document.getElementById('manualPlaceAddress');
@@ -1943,18 +2155,18 @@
     const closeScheduleNoteBtn = document.getElementById('closeScheduleNoteBtn');
     const scheduleNoteTitle = document.getElementById('scheduleNoteTitle');
     const scheduleNoteMemo = document.getElementById('scheduleNoteMemo');
-    const scheduleNotePreview = document.getElementById('scheduleNotePreview');
     const scheduleNotePlaceSummary = document.getElementById('scheduleNotePlaceSummary');
-    const openScheduleEditBtn = document.getElementById('openScheduleEditBtn');
+    const scheduleNotePhotoPreview = document.getElementById('scheduleNotePhotoPreview');
+    const scheduleNotePhotoPreviewStatus = document.getElementById('scheduleNotePhotoPreviewStatus');
     const schedulePlaceEditPanel = document.getElementById('schedulePlaceEditPanel');
     const scheduleNotePlaceName = document.getElementById('scheduleNotePlaceName');
     const scheduleNoteAddress = document.getElementById('scheduleNoteAddress');
     const scheduleNoteMapsUri = document.getElementById('scheduleNoteMapsUri');
+    const scheduleNotePhotoUrl = document.getElementById('scheduleNotePhotoUrl');
     const scheduleNoteCategory = document.getElementById('scheduleNoteCategory');
     const scheduleNoteLat = document.getElementById('scheduleNoteLat');
     const scheduleNoteLng = document.getElementById('scheduleNoteLng');
     const saveScheduleCoordsBtn = document.getElementById('saveScheduleCoordsBtn');
-    const saveScheduleNoteBtn = document.getElementById('saveScheduleNoteBtn');
     const openScheduleLinkBtn = document.getElementById('openScheduleLinkBtn');
     const scheduleMapEl = document.getElementById('scheduleMap');
     const scheduleMapLegend = document.getElementById('scheduleMapLegend');
@@ -1983,6 +2195,9 @@
     let currentScheduleNoteItem = null;
     let manualPlacePhotoUrl = '';
     let photoPickerMode = '';
+    let locationImportOptions = { countries: [], cities_by_country: {} };
+    let locationImportLoadedItems = [];
+    let locationInfoFavoriteIds = new Set();
     const scheduleNotePhotoCache = new Map();
     let scheduleNotePhotoRequestId = 0;
     let scheduleMapSyncRaf = 0;
@@ -1991,30 +2206,40 @@
     function parseScheduleNote(rawNote) {
       const text = String(rawNote || '').trim();
       if (!text) {
-        return { memo: '', photo: '', link: '' };
+        return { memo: '', photo: '', link: '', locationInfoId: null };
       }
 
       const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
       const memoLine = lines.find((line) => line.startsWith('[MEMO]'));
       const photoLine = lines.find((line) => line.startsWith('[PHOTO]'));
       const linkLine = lines.find((line) => line.startsWith('[LINK]'));
+      const locationInfoLine = lines.find((line) => line.startsWith('[LOCATION_INFO_ID]'));
 
       const photo = photoLine ? photoLine.replace(/^\[PHOTO\]/, '').trim() : '';
       const link = linkLine ? linkLine.replace(/^\[LINK\]/, '').trim() : '';
+      const locationInfoIdRaw = locationInfoLine ? locationInfoLine.replace(/^\[LOCATION_INFO_ID\]/, '').trim() : '';
+      const parsedLocationInfoId = Number(locationInfoIdRaw);
+      const locationInfoId = Number.isFinite(parsedLocationInfoId) && parsedLocationInfoId > 0
+        ? parsedLocationInfoId
+        : null;
 
       if (memoLine) {
         return {
           memo: memoLine.replace(/^\[MEMO\]/, '').trim(),
           photo,
           link,
+          locationInfoId,
         };
       }
 
-      const filtered = lines.filter((line) => !line.startsWith('[LINK]') && !line.startsWith('[PHOTO]'));
+      const filtered = lines.filter(
+        (line) => !line.startsWith('[LINK]') && !line.startsWith('[PHOTO]') && !line.startsWith('[LOCATION_INFO_ID]')
+      );
       return {
         memo: filtered.join('\n'),
         photo,
         link,
+        locationInfoId,
       };
     }
 
@@ -2023,6 +2248,8 @@
       const memo = String(memoText || '').trim();
       const photo = String(options.photo || '').trim();
       const link = String(options.link || '').trim();
+      const rawLocationInfoId = Number(options.locationInfoId);
+      const locationInfoId = Number.isFinite(rawLocationInfoId) && rawLocationInfoId > 0 ? rawLocationInfoId : null;
 
       if (memo) {
         lines.push(`[MEMO] ${memo}`);
@@ -2032,6 +2259,9 @@
       }
       if (link && link.length <= 240) {
         lines.push(`[LINK] ${link}`);
+      }
+      if (locationInfoId) {
+        lines.push(`[LOCATION_INFO_ID] ${locationInfoId}`);
       }
 
       let built = lines.join('\n').trim();
@@ -2044,6 +2274,32 @@
       return clippedMemo ? `[MEMO] ${clippedMemo}` : '';
     }
 
+    function getLocationInfoIdFromTripPlace(item) {
+      const parsed = parseScheduleNote(item?.memo || item?.note || '');
+      return Number.isFinite(parsed.locationInfoId) ? parsed.locationInfoId : null;
+    }
+
+    function decorateTripPlaceName(item) {
+      const baseName = String(item?.place_name || '').trim();
+      const locationInfoId = getLocationInfoIdFromTripPlace(item);
+      if (locationInfoId && locationInfoFavoriteIds.has(locationInfoId)) {
+        return `♥ ${baseName}`;
+      }
+      return baseName;
+    }
+
+    async function loadLocationInfoFavoriteIds() {
+      const response = await fetch('/api/location-info/favorites');
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '좋아요 목록 조회 실패');
+      }
+
+      const ids = Array.isArray(data.favorite_ids) ? data.favorite_ids : [];
+      locationInfoFavoriteIds = new Set(ids.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0));
+      return locationInfoFavoriteIds;
+    }
+
     function escapeAttribute(value) {
       return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
@@ -2054,25 +2310,22 @@
       return matches ? Array.from(new Set(matches.map((item) => item.trim()))) : [];
     }
 
-    function linkifyText(text) {
-      const source = String(text || '');
-      const escaped = escapeHtml(source);
-      return escaped.replace(/https?:\/\/[^\s<>"]+/gi, (match) => {
-        const safeHref = escapeAttribute(match);
-        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">링크 열기</a>`;
-      });
-    }
+    function renderSchedulePhotoPreview(photoUrl, statusMessage = '') {
+      if (!scheduleNotePhotoPreview || !scheduleNotePhotoPreviewStatus) {
+        return;
+      }
 
-    function renderScheduleNotePreview(text) {
-      const content = String(text || '').trim();
-      if (!scheduleNotePreview) {
+      const url = String(photoUrl || '').trim();
+      if (url) {
+        scheduleNotePhotoPreview.src = url;
+        scheduleNotePhotoPreview.hidden = false;
+        scheduleNotePhotoPreviewStatus.textContent = statusMessage || '이미지 링크가 적용되었습니다.';
         return;
       }
-      if (!content) {
-        scheduleNotePreview.innerHTML = '<span class="empty-note">메모가 비어 있습니다.</span>';
-        return;
-      }
-      scheduleNotePreview.innerHTML = linkifyText(content).replace(/\n/g, '<br>');
+
+      scheduleNotePhotoPreview.removeAttribute('src');
+      scheduleNotePhotoPreview.hidden = true;
+      scheduleNotePhotoPreviewStatus.textContent = statusMessage || '사진 없음';
     }
 
     function buildSchedulePlaceSummaryHtml(item, options = {}) {
@@ -2092,6 +2345,11 @@
         ? `<a href="${escapeAttribute(googleMapsUri)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`
         : '<span class="empty-note">구글맵 링크 없음</span>';
 
+      const imageUrl = String(options.photoUrl || '').trim();
+      const imageLinkHtml = imageUrl
+        ? `<a href="${escapeAttribute(imageUrl)}" target="_blank" rel="noopener noreferrer">링크 열기</a>`
+        : '<span class="empty-note">이미지 링크 없음</span>';
+
       const photoUrl = String(options.photoUrl || '').trim();
       const photoState = options.photoState || 'loading';
       const photoHtml = photoUrl
@@ -2107,37 +2365,8 @@
         <div class="note-place-summary-item" data-edit-target="longitude"><span class="note-place-label">경도</span><div class="note-place-value">${longitudeHtml}</div></div>
         <div class="note-place-summary-item"><span class="note-place-label">사진</span><div class="note-place-value">${photoHtml}</div></div>
         <div class="note-place-summary-item" data-edit-target="google_maps_uri"><span class="note-place-label">구글맵 정보</span><div class="note-place-value">${googleMapsHtml}</div></div>
+        <div class="note-place-summary-item" data-edit-target="photo_url"><span class="note-place-label">이미지 링크</span><div class="note-place-value">${imageLinkHtml}</div></div>
       `;
-    }
-
-    function setScheduleEditMode(enabled) {
-      const on = Boolean(enabled);
-      if (schedulePlaceEditPanel) {
-        schedulePlaceEditPanel.hidden = !on;
-      }
-      if (openScheduleEditBtn) {
-        openScheduleEditBtn.textContent = on ? '수정 취소' : '수정';
-      }
-    }
-
-    function focusScheduleEditField(fieldKey) {
-      setScheduleEditMode(true);
-      const key = String(fieldKey || '').trim();
-      const targetMap = {
-        place_name: scheduleNotePlaceName,
-        formatted_address: scheduleNoteAddress,
-        google_maps_uri: scheduleNoteMapsUri,
-        latitude: scheduleNoteLat,
-        longitude: scheduleNoteLng,
-      };
-      const target = targetMap[key] || scheduleNotePlaceName;
-      if (!target) {
-        return;
-      }
-      target.focus();
-      if (typeof target.select === 'function') {
-        target.select();
-      }
     }
 
     function setScheduleCoordinateInputs(item) {
@@ -2157,6 +2386,11 @@
       }
       if (scheduleNoteMapsUri) {
         scheduleNoteMapsUri.value = String(item?.google_maps_uri || '');
+      }
+      if (scheduleNotePhotoUrl) {
+        const parsed = parseScheduleNote(item?.note || '');
+        const photoUrl = String(item?.photoUrl || parsed.photo || '').trim();
+        scheduleNotePhotoUrl.value = photoUrl;
       }
       if (scheduleNoteCategory) {
         scheduleNoteCategory.value = category || 'point_of_interest';
@@ -2224,6 +2458,9 @@
       if (!scheduleNotePlaceSummary) {
         return;
       }
+      if (scheduleNotePlaceSummary.closest('[hidden]')) {
+        return;
+      }
 
       const requestId = ++scheduleNotePhotoRequestId;
       scheduleNotePlaceSummary.innerHTML = buildSchedulePlaceSummaryHtml(item, { photoState: 'loading' });
@@ -2239,6 +2476,36 @@
       });
     }
 
+    async function refreshSchedulePhotoPreview(item) {
+      if (!item) {
+        renderSchedulePhotoPreview('', '사진 없음');
+        return;
+      }
+
+      const directInput = normalizeExternalUrl(scheduleNotePhotoUrl?.value || '');
+      if (directInput) {
+        renderSchedulePhotoPreview(directInput, '입력한 이미지 링크 미리보기');
+        return;
+      }
+
+      const notePhoto = String(parseScheduleNote(item?.note).photo || '').trim();
+      if (notePhoto) {
+        renderSchedulePhotoPreview(notePhoto, '저장된 이미지 미리보기');
+        return;
+      }
+
+      renderSchedulePhotoPreview('', '사진 불러오는 중...');
+      const photoUrl = await fetchSchedulePlacePhotoUrl(item);
+      if (photoUrl) {
+        if (currentScheduleNoteItem) {
+          currentScheduleNoteItem.photoUrl = photoUrl;
+        }
+        renderSchedulePhotoPreview(photoUrl, '자동 추천 이미지 미리보기');
+      } else {
+        renderSchedulePhotoPreview('', '사진 없음');
+      }
+    }
+
     function closeScheduleNoteModal() {
       if (scheduleNoteModal) {
         scheduleNoteModal.hidden = true;
@@ -2246,11 +2513,10 @@
       editingScheduleId = null;
       currentScheduleNoteItem = null;
       scheduleNoteMemo.value = '';
-      renderScheduleNotePreview('');
       if (scheduleNotePlaceSummary) {
         scheduleNotePlaceSummary.innerHTML = '';
       }
-      setScheduleEditMode(false);
+      renderSchedulePhotoPreview('', '사진 없음');
       if (scheduleNotePlaceName) {
         scheduleNotePlaceName.value = '';
       }
@@ -2259,6 +2525,9 @@
       }
       if (scheduleNoteMapsUri) {
         scheduleNoteMapsUri.value = '';
+      }
+      if (scheduleNotePhotoUrl) {
+        scheduleNotePhotoUrl.value = '';
       }
       if (scheduleNoteCategory) {
         scheduleNoteCategory.value = 'point_of_interest';
@@ -2288,10 +2557,9 @@
       scheduleNoteTitle.textContent = `일정 메모: ${item.place_name || ''}`;
       scheduleNoteMemo.value = parsed.memo;
       setScheduleCoordinateInputs(item);
-      renderScheduleNotePreview(parsed.memo);
       scheduleNoteModal.hidden = false;
-      setScheduleEditMode(false);
       await renderSchedulePlaceSummary(item);
+      await refreshSchedulePhotoPreview(item);
     }
 
     async function saveScheduleCoordinates() {
@@ -2302,6 +2570,7 @@
       const placeName = String(scheduleNotePlaceName?.value || '').trim();
       const formattedAddress = String(scheduleNoteAddress?.value || '').trim();
       const googleMapsUri = String(scheduleNoteMapsUri?.value || '').trim();
+      const photoUrl = normalizeExternalUrl(scheduleNotePhotoUrl?.value || '');
       const placeCategory = String(scheduleNoteCategory?.value || 'point_of_interest').trim().toLowerCase();
       if (!placeName) {
         throw new Error('장소명을 입력하세요.');
@@ -2338,6 +2607,7 @@
       currentScheduleNoteItem.place_category = updated.place_category;
       currentScheduleNoteItem.latitude = updated.latitude;
       currentScheduleNoteItem.longitude = updated.longitude;
+      currentScheduleNoteItem.photoUrl = photoUrl;
 
       const placeId = Number(currentScheduleNoteItem.trip_place_id);
       currentScheduleItems.forEach((item) => {
@@ -2348,6 +2618,7 @@
           item.place_category = updated.place_category;
           item.latitude = updated.latitude;
           item.longitude = updated.longitude;
+          item.photoUrl = photoUrl;
         }
       });
       cachedTripPlaces.forEach((item) => {
@@ -2368,14 +2639,53 @@
         const refreshed = currentScheduleItems.find((x) => Number(x.id) === Number(editingScheduleId));
         if (refreshed) {
           currentScheduleNoteItem = refreshed;
+          currentScheduleNoteItem.photoUrl = photoUrl;
         }
       }
+
+      if (editingScheduleId) {
+        const memoText = String(scheduleNoteMemo.value || '').trim();
+        const parsedCurrent = parseScheduleNote(currentScheduleNoteItem?.note || '');
+        const linkText = normalizeExternalUrl(
+          String(parsedCurrent.link || '').trim() || String(currentScheduleNoteItem?.google_maps_uri || '').trim()
+        );
+        const nextNote = buildScheduleNoteValue(memoText, {
+          photo: photoUrl,
+          link: linkText,
+          locationInfoId: parsedCurrent.locationInfoId,
+        });
+
+        const noteResponse = await fetch(`/api/trip-schedule/${encodeURIComponent(editingScheduleId)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schedule_date: normalizeDateKey(currentScheduleNoteItem.schedule_date),
+            schedule_time: normalizeTimeKey(currentScheduleNoteItem.schedule_time),
+            note: nextNote,
+          })
+        });
+        const noteData = await readApiData(noteResponse);
+        if (!noteResponse.ok) {
+          throw new Error(noteData.error || '이미지 링크 저장 실패');
+        }
+
+        currentScheduleItems.forEach((item) => {
+          if (Number(item.id) === Number(editingScheduleId)) {
+            item.note = nextNote;
+            item.photoUrl = photoUrl;
+          }
+        });
+        if (currentScheduleNoteItem) {
+          currentScheduleNoteItem.note = nextNote;
+        }
+      }
+
+      await refreshSchedulePhotoPreview(currentScheduleNoteItem);
 
       scheduleNoteTitle.textContent = `일정 메모: ${currentScheduleNoteItem.place_name || ''}`;
       setScheduleCoordinateInputs(currentScheduleNoteItem);
       await renderSchedulePlaceSummary(currentScheduleNoteItem);
-      statusText.textContent = '장소 정보 저장 완료';
-      setScheduleEditMode(false);
+      statusText.textContent = '장소 정보 저장 완료 (이미지 링크 반영)';
     }
 
     function normalizeExternalUrl(rawUrl) {
@@ -2390,13 +2700,12 @@
     }
 
     function openScheduleLinkNow() {
-      const memoUrls = extractUrls(scheduleNoteMemo.value);
-      const parsed = parseScheduleNote(currentScheduleNoteItem?.note || '');
-      const parsedLink = String(parsed.link || '').trim();
-      const fallbackUrl = String(currentScheduleNoteItem?.google_maps_uri || '').trim();
-      const url = normalizeExternalUrl(parsedLink || memoUrls[0] || fallbackUrl);
+      const mapUrl = normalizeExternalUrl(
+        String(scheduleNoteMapsUri?.value || '').trim() || String(currentScheduleNoteItem?.google_maps_uri || '').trim()
+      );
+      const url = mapUrl;
       if (!url) {
-        statusText.textContent = '메모 안에 링크가 없고, 구글맵 정보도 없습니다.';
+        statusText.textContent = '구글맵 링크가 없습니다.';
         return;
       }
 
@@ -2406,62 +2715,6 @@
       } catch {
         statusText.textContent = '링크 형식이 올바르지 않습니다.';
       }
-    }
-
-    async function saveScheduleNote() {
-      if (!editingScheduleId) {
-        return;
-      }
-
-      const item = currentScheduleItems.find((x) => Number(x.id) === Number(editingScheduleId));
-      if (!item) {
-        statusText.textContent = '저장할 일정 정보를 찾지 못했습니다.';
-        return;
-      }
-
-      const memoText = String(scheduleNoteMemo.value || '').trim();
-      let photoText = String(currentScheduleNoteItem?.photoUrl || '').trim();
-      const memoUrls = extractUrls(memoText);
-      const parsedCurrent = parseScheduleNote(currentScheduleNoteItem?.note || '');
-      const linkText = normalizeExternalUrl(
-        memoUrls[0]
-        || String(parsedCurrent.link || '').trim()
-        || String(currentScheduleNoteItem?.google_maps_uri || '').trim()
-      );
-
-      if (!photoText) {
-        photoText = await fetchSchedulePlacePhotoUrl(item);
-      }
-
-      if (photoText) {
-        item.photoUrl = photoText;
-        if (currentScheduleNoteItem) {
-          currentScheduleNoteItem.photoUrl = photoText;
-        }
-      }
-
-      const nextNote = buildScheduleNoteValue(memoText, {
-        photo: photoText,
-        link: linkText
-      });
-
-      const response = await fetch(`/api/trip-schedule/${encodeURIComponent(editingScheduleId)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schedule_date: normalizeDateKey(item.schedule_date),
-          schedule_time: normalizeTimeKey(item.schedule_time),
-          note: nextNote
-        })
-      });
-      const data = await readApiData(response);
-      if (!response.ok) {
-        throw new Error(data.error || '일정 메모 저장 실패');
-      }
-
-      await loadTripScheduleByTrip(String(item.trip_id || tripSelectForSchedule.value || tripSelectForPlace.value || ''), scheduleDate.value || '');
-      statusText.textContent = '일정 메모 저장 완료';
-      closeScheduleNoteModal();
     }
 
     function syncScheduleMapHeight() {
@@ -3063,7 +3316,6 @@
           const target = event.currentTarget;
           const selectedId = String(target.getAttribute('data-trip-id') || '');
           beginTripEditById(selectedId);
-          closeTripManageModal();
         });
       });
 
@@ -3099,6 +3351,13 @@
       document.getElementById('tripEnd').value = trip.end_date || '';
       tripSubmitBtn.textContent = '여행 수정 저장';
       tripCancelEditBtn.hidden = false;
+      if (tripManageModal && !tripManageModal.hidden) {
+        const modalPanel = tripManageModal.querySelector('.modal-panel');
+        if (modalPanel) {
+          modalPanel.scrollTop = 0;
+        }
+      }
+      document.getElementById('tripTitle').focus();
       statusText.textContent = `수정 모드: ${trip.title}`;
     }
 
@@ -3153,13 +3412,50 @@
       tripForm.reset();
     }
 
+    function normalizeTripPlaceDedupeKey(item) {
+      const name = String(item?.place_name || '').trim().toLowerCase();
+      const address = String(item?.formatted_address || '').trim().toLowerCase();
+      return name || address;
+    }
+
+    function prefersTripPlaceCandidate(candidate, current) {
+      const candidateFavorite = Boolean(getLocationInfoIdFromTripPlace(candidate) && locationInfoFavoriteIds.has(getLocationInfoIdFromTripPlace(candidate)));
+      const currentFavorite = Boolean(getLocationInfoIdFromTripPlace(current) && locationInfoFavoriteIds.has(getLocationInfoIdFromTripPlace(current)));
+      if (candidateFavorite !== currentFavorite) {
+        return candidateFavorite;
+      }
+
+      const candidateHasMap = Boolean(String(candidate?.google_maps_uri || '').trim());
+      const currentHasMap = Boolean(String(current?.google_maps_uri || '').trim());
+      if (candidateHasMap !== currentHasMap) {
+        return candidateHasMap;
+      }
+
+      return Number(candidate?.id || 0) > Number(current?.id || 0);
+    }
+
     function renderTripPlaceList(items) {
       if (!items.length) {
         tripPlaceList.innerHTML = '<div class="planner-item">이 여행의 장소함이 비어 있습니다.</div>';
         return;
       }
 
-      const availablePlaces = items.filter((item) => !scheduledTripPlaceIds.has(Number(item.id)));
+      const dedupedPlaceMap = new Map();
+      items.forEach((item) => {
+        const dedupeKey = normalizeTripPlaceDedupeKey(item);
+        if (!dedupeKey) {
+          dedupedPlaceMap.set(`id:${item.id}`, item);
+          return;
+        }
+
+        const existing = dedupedPlaceMap.get(dedupeKey);
+        if (!existing || prefersTripPlaceCandidate(item, existing)) {
+          dedupedPlaceMap.set(dedupeKey, item);
+        }
+      });
+
+      const dedupedPlaces = Array.from(dedupedPlaceMap.values());
+      const availablePlaces = dedupedPlaces.filter((item) => !scheduledTripPlaceIds.has(Number(item.id)));
       if (!availablePlaces.length) {
         tripPlaceList.innerHTML = '<div class="planner-item">모든 장소가 일정표에 배정되었습니다.</div>';
         return;
@@ -3194,7 +3490,7 @@
                   data-place-id="${escapeHtml(item.id)}"
                   data-place-name="${escapeHtml(item.place_name)}"
                   data-place-category="${escapeHtml(item.place_category || '')}"
-                >${escapeHtml(item.place_name)}<span class="place-chip-remove js-delete-place" data-place-id="${escapeHtml(item.id)}" title="삭제" aria-label="삭제">×</span></button>
+                >${escapeHtml(decorateTripPlaceName(item))}<span class="place-chip-remove js-delete-place" data-place-id="${escapeHtml(item.id)}" title="삭제" aria-label="삭제">×</span></button>
               `).join('')}
             </div>
           </div>
@@ -3671,6 +3967,12 @@
         throw new Error(data.error || '여행 장소 조회 실패');
       }
 
+      try {
+        await loadLocationInfoFavoriteIds();
+      } catch {
+        locationInfoFavoriteIds = new Set();
+      }
+
       const places = data.places || [];
       cachedTripPlaces = places;
       renderTripPlaceList(places);
@@ -3785,6 +4087,21 @@
       modalCategory.value = placeCategorySelect.value || '';
       resetManualPlaceFields({ keepStatus: true });
       setPhotoPickerMode('');
+      if (locationImportCountry) {
+        locationImportCountry.value = '';
+      }
+      if (locationImportCity) {
+        locationImportCity.innerHTML = '<option value="">도시를 선택하세요</option>';
+        locationImportCity.disabled = true;
+      }
+      if (locationImportFavoritesOnly) {
+        locationImportFavoritesOnly.checked = false;
+      }
+      locationImportLoadedItems = [];
+      if (locationImportResults) {
+        locationImportResults.innerHTML = '<div class="planner-item">불러오기 전입니다.</div>';
+      }
+      setLocationImportStatus('나라와 도시를 선택해 주세요.');
       photoPickerModal.hidden = false;
     }
 
@@ -3918,11 +4235,290 @@
       }
     }
 
+    function setLocationImportStatus(message) {
+      if (locationImportStatus) {
+        locationImportStatus.textContent = String(message || '');
+      }
+    }
+
+    function renderLocationImportCities() {
+      if (!locationImportCity || !locationImportCountry) {
+        return;
+      }
+
+      const country = String(locationImportCountry.value || '').trim();
+      const cityMap = locationImportOptions?.cities_by_country || {};
+      const cities = Array.isArray(cityMap[country]) ? cityMap[country] : [];
+
+      locationImportCity.innerHTML = '<option value="">도시를 선택하세요</option>';
+      cities.forEach((city) => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        locationImportCity.appendChild(option);
+      });
+      locationImportCity.disabled = cities.length === 0;
+    }
+
+    async function loadLocationImportOptions() {
+      if (!locationImportCountry) {
+        return;
+      }
+
+      setLocationImportStatus('나라/도시 목록 불러오는 중...');
+      const response = await fetch('/api/location-info/options');
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '나라/도시 옵션 조회 실패');
+      }
+
+      const countries = Array.isArray(data.countries) ? data.countries : [];
+      const citiesByCountry = data.cities_by_country || {};
+      locationImportOptions = { countries, cities_by_country: citiesByCountry };
+
+      locationImportCountry.innerHTML = '<option value="">나라를 선택하세요</option>';
+      countries.forEach((country) => {
+        const option = document.createElement('option');
+        option.value = country;
+        option.textContent = country;
+        locationImportCountry.appendChild(option);
+      });
+
+      if (countries.length > 0) {
+        const preferredCountry = String(countryCodeSelect?.selectedOptions?.[0]?.textContent || '').replace(/\s*\([A-Z]{2}\)\s*$/, '').trim();
+        if (preferredCountry && countries.includes(preferredCountry)) {
+          locationImportCountry.value = preferredCountry;
+        }
+      }
+
+      renderLocationImportCities();
+      setLocationImportStatus('나라와 도시를 선택한 뒤 불러오기를 눌러 주세요.');
+    }
+
+    function mapLocationInfoCategoryToTripCategory(rawCategory) {
+      const text = String(rawCategory || '').trim().toLowerCase();
+      if (!text) {
+        return 'point_of_interest';
+      }
+      if (['숙소', '호텔', 'hotel', 'lodging'].some((k) => text.includes(k))) return 'lodging';
+      if (['식당', '맛집', 'restaurant'].some((k) => text.includes(k))) return 'restaurant';
+      if (['카페', 'cafe'].some((k) => text.includes(k))) return 'cafe';
+      if (['박물관', 'museum'].some((k) => text.includes(k))) return 'museum';
+      if (['공원', 'park'].some((k) => text.includes(k))) return 'park';
+      if (['랜드마크', 'historical_landmark'].some((k) => text.includes(k))) return 'historical_landmark';
+      if (['관광', '명소', 'tourist_attraction'].some((k) => text.includes(k))) return 'tourist_attraction';
+      if (['point_of_interest', '기타'].some((k) => text.includes(k))) return 'point_of_interest';
+      return 'point_of_interest';
+    }
+
+    function normalizeLocationInfoItem(item) {
+      const attraction = String(item?.attraction || '').trim();
+      return {
+        locationInfoId: Number(item?.id) || null,
+        displayName: attraction || '이름 없음',
+        formattedAddress: String(item?.address || '').trim(),
+        googleMapsUri: String(item?.maps_url || '').trim(),
+        latitude: item?.latitude,
+        longitude: item?.longitude,
+        photoUrl: String(item?.image_url || '').trim(),
+        sourceCategory: String(item?.category || '').trim(),
+        sourceDetail: String(item?.detail || '').trim(),
+      };
+    }
+
+    function renderLocationImportResults(items) {
+      if (!locationImportResults) {
+        return;
+      }
+
+      if (!items.length) {
+        locationImportResults.innerHTML = '<div class="planner-item">선택한 조건의 장소가 없습니다.</div>';
+        return;
+      }
+
+      locationImportResults.innerHTML = items.map((item) => {
+        const id = Number(item.id);
+        const key = `li-${id}`;
+        const isFavorite = Number.isFinite(id) && locationInfoFavoriteIds.has(id);
+        const isChecked = selectedPickedPlaces.has(key);
+        const title = `${isFavorite ? '<span class="favorite-heart">♥</span> ' : ''}${escapeHtml(item.attraction || '이름 없음')}`;
+        const meta = [item.country, item.city, item.category].filter(Boolean).join(' · ');
+        const address = String(item.address || '').trim();
+        return `
+          <article class="location-import-card ${isFavorite ? 'is-favorite' : ''} ${isChecked ? 'active' : ''}" data-location-id="${escapeHtml(id)}">
+            <div class="location-import-card-head">
+              <strong class="location-import-card-title">${title}</strong>
+              <input type="checkbox" class="location-import-check" data-location-id="${escapeHtml(id)}" aria-label="이 장소 가져오기 선택" ${isChecked ? 'checked' : ''} />
+            </div>
+            <div class="location-import-card-meta">${escapeHtml(meta || '분류 정보 없음')}</div>
+            <div class="location-import-card-meta">${escapeHtml(address || '주소 정보 없음')}</div>
+          </article>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.location-import-check').forEach((check) => {
+        check.addEventListener('change', (event) => {
+          const locationId = Number(event.currentTarget.getAttribute('data-location-id') || '');
+          if (!Number.isFinite(locationId)) {
+            return;
+          }
+
+          const found = items.find((item) => Number(item.id) === locationId);
+          if (!found) {
+            return;
+          }
+
+          const key = `li-${locationId}`;
+          const card = document.querySelector(`.location-import-card[data-location-id="${locationId}"]`);
+          const isSelected = Boolean(event.currentTarget.checked);
+
+          if (isSelected) {
+            selectedPickedPlaces.set(key, normalizeLocationInfoItem(found));
+            if (card) {
+              card.classList.add('active');
+            }
+          } else {
+            selectedPickedPlaces.delete(key);
+            if (card) {
+              card.classList.remove('active');
+            }
+          }
+
+          savePickedPlaceBtn.disabled = selectedPickedPlaces.size === 0;
+          savePickedLocationBtn.disabled = selectedPickedPlaces.size === 0;
+          setLocationImportStatus(`선택 ${selectedPickedPlaces.size}건`);
+        });
+      });
+    }
+
+    function getFilteredLocationImportItems(items) {
+      const sourceItems = Array.isArray(items) ? items : [];
+      if (!locationImportFavoritesOnly?.checked) {
+        return sourceItems;
+      }
+      return sourceItems.filter((item) => {
+        const id = Number(item?.id);
+        return Number.isFinite(id) && locationInfoFavoriteIds.has(id);
+      });
+    }
+
+    function refreshLocationImportResultsFromCache() {
+      const filteredItems = getFilteredLocationImportItems(locationImportLoadedItems);
+
+      if (locationImportFavoritesOnly?.checked) {
+        selectedPickedPlaces = new Map(
+          filteredItems.map((item) => [`li-${Number(item.id)}`, normalizeLocationInfoItem(item)])
+        );
+      }
+
+      renderLocationImportResults(filteredItems);
+      const suffix = locationImportFavoritesOnly?.checked ? ' (좋아요만)' : '';
+      const selectedCount = selectedPickedPlaces.size;
+      savePickedPlaceBtn.disabled = selectedCount === 0;
+      savePickedLocationBtn.disabled = selectedCount === 0;
+      setLocationImportStatus(`불러오기 완료: ${filteredItems.length}건${suffix}${selectedCount ? ` / 자동 선택 ${selectedCount}건` : ''}`);
+    }
+
+    async function loadLocationInfoItemsForImport() {
+      const country = String(locationImportCountry?.value || '').trim();
+      const city = String(locationImportCity?.value || '').trim();
+      if (!country || !city) {
+        throw new Error('나라와 도시를 모두 선택하세요.');
+      }
+
+      selectedPickedPlaces = new Map();
+      savePickedPlaceBtn.disabled = true;
+      savePickedLocationBtn.disabled = true;
+      setLocationImportStatus('저장된 장소 불러오는 중...');
+
+      try {
+        await loadLocationInfoFavoriteIds();
+      } catch {
+        locationInfoFavoriteIds = new Set();
+      }
+
+      const query = new URLSearchParams({ country, city });
+      const response = await fetch(`/api/location-info/list?${query.toString()}`);
+      const data = await readApiData(response);
+      if (!response.ok) {
+        throw new Error(data.error || '장소 목록 불러오기 실패');
+      }
+
+      locationImportLoadedItems = Array.isArray(data.items) ? data.items : [];
+      refreshLocationImportResultsFromCache();
+    }
+
+    async function saveSelectedLocationInfoToTrip() {
+      const tripId = String(tripSelectForPlace.value || '').trim();
+      if (!tripId) {
+        throw new Error('여행을 먼저 선택하세요.');
+      }
+
+      const selectedItems = Array.from(selectedPickedPlaces.values());
+      if (!selectedItems.length) {
+        throw new Error('가져올 장소를 먼저 선택하세요.');
+      }
+
+      let savedCount = 0;
+      let duplicateCount = 0;
+
+      for (const pickedPlace of selectedItems) {
+        const displayName = typeof pickedPlace.displayName === 'object'
+          ? (pickedPlace.displayName?.text || '이름 없음')
+          : (pickedPlace.displayName || '이름 없음');
+
+        const payload = {
+          trip_id: tripId,
+          place_name: displayName,
+          place_category: mapLocationInfoCategoryToTripCategory(pickedPlace.sourceCategory),
+          formatted_address: pickedPlace.formattedAddress || '',
+          google_maps_uri: pickedPlace.googleMapsUri || '',
+          latitude: pickedPlace.latitude,
+          longitude: pickedPlace.longitude,
+          memo: buildScheduleNoteValue(pickedPlace.sourceDetail || '', {
+            photo: pickedPlace.photoUrl || '',
+            link: pickedPlace.googleMapsUri || '',
+            locationInfoId: pickedPlace.locationInfoId,
+          })
+        };
+
+        const response = await fetch('/api/trip-places', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await readApiData(response);
+        if (response.ok) {
+          savedCount += 1;
+          continue;
+        }
+        if (response.status === 409) {
+          duplicateCount += 1;
+          continue;
+        }
+        throw new Error(data.error || '여행 장소 저장 실패');
+      }
+
+      await loadTrips(String(tripId));
+      await loadTripPlacesByTrip(String(tripId));
+      if (tripSelectForSchedule.value === String(tripId)) {
+        await loadTripScheduleByTrip(String(tripId));
+      }
+
+      statusText.textContent = `여행 장소함 저장 완료: ${savedCount}건${duplicateCount ? ` (중복 ${duplicateCount}건 제외)` : ''}`;
+      closePhotoPicker();
+    }
+
     function setPhotoPickerMode(mode = '') {
       photoPickerMode = mode;
 
       const isParse = mode === 'parse';
       const isGoogle = mode === 'google';
+      const isLocation = mode === 'location';
+
+      if (savePickedPlaceBtn) {
+        savePickedPlaceBtn.hidden = !isLocation;
+      }
 
       if (manualPlaceBox) {
         manualPlaceBox.hidden = !isParse;
@@ -3936,14 +4532,19 @@
           photoPickerResults.innerHTML = '';
         }
       }
+      if (locationImportBox) {
+        locationImportBox.hidden = !isLocation;
+      }
 
       startParseModeBtn?.classList.toggle('is-active', isParse);
-      startGoogleModeBtn?.classList.toggle('is-active', isGoogle);
+      startGoogleModeBtn?.classList.toggle('is-active', isGoogle || isLocation);
 
       if (isParse) {
         photoPickerStatus.textContent = 'Google Maps 링크를 넣고 파싱을 시작하세요.';
       } else if (isGoogle) {
         photoPickerStatus.textContent = '국가, 도시, 카테고리를 고른 뒤 검색하세요.';
+      } else if (isLocation) {
+        photoPickerStatus.textContent = '나라/도시를 선택해 저장된 장소를 불러오세요.';
       } else {
         photoPickerStatus.textContent = '시작 방식을 선택하세요.';
       }
@@ -4481,8 +5082,39 @@
       setPhotoPickerMode('parse');
     });
     startGoogleModeBtn.addEventListener('click', () => {
-      setPhotoPickerMode('google');
+      setPhotoPickerMode('location');
+      loadLocationImportOptions().catch((error) => {
+        setLocationImportStatus(error.message);
+      });
     });
+    if (locationImportCountry) {
+      locationImportCountry.addEventListener('change', () => {
+        renderLocationImportCities();
+        if (locationImportResults) {
+          locationImportResults.innerHTML = '<div class="planner-item">도시 선택 후 불러오기를 눌러주세요.</div>';
+        }
+      });
+    }
+    if (loadLocationImportBtn) {
+      loadLocationImportBtn.addEventListener('click', async () => {
+        try {
+          await loadLocationInfoItemsForImport();
+        } catch (error) {
+          setLocationImportStatus(error.message);
+        }
+      });
+    }
+    if (locationImportFavoritesOnly) {
+      locationImportFavoritesOnly.addEventListener('change', () => {
+        if (!locationImportLoadedItems.length) {
+          return;
+        }
+        selectedPickedPlaces = locationImportFavoritesOnly.checked ? selectedPickedPlaces : new Map();
+        savePickedPlaceBtn.disabled = true;
+        savePickedLocationBtn.disabled = true;
+        refreshLocationImportResultsFromCache();
+      });
+    }
     openTripManageBtn.addEventListener('click', openTripManageModal);
     closePhotoPickerBtn.addEventListener('click', closePhotoPicker);
     photoPickerBackdrop.addEventListener('click', closePhotoPicker);
@@ -4490,13 +5122,6 @@
     tripManageBackdrop.addEventListener('click', closeTripManageModal);
     closeScheduleNoteBtn.addEventListener('click', closeScheduleNoteModal);
     scheduleNoteBackdrop.addEventListener('click', closeScheduleNoteModal);
-    saveScheduleNoteBtn.addEventListener('click', async () => {
-      try {
-        await saveScheduleNote();
-      } catch (error) {
-        statusText.textContent = error.message;
-      }
-    });
     saveScheduleCoordsBtn.addEventListener('click', async () => {
       try {
         await saveScheduleCoordinates();
@@ -4504,20 +5129,18 @@
         statusText.textContent = error.message;
       }
     });
-    openScheduleEditBtn.addEventListener('click', () => {
-      const next = !(schedulePlaceEditPanel && !schedulePlaceEditPanel.hidden);
-      setScheduleEditMode(next);
-    });
-    scheduleNotePlaceSummary.addEventListener('dblclick', (event) => {
-      const target = event.target.closest('[data-edit-target]');
-      if (!target) {
-        return;
-      }
-      focusScheduleEditField(target.getAttribute('data-edit-target'));
-    });
-    scheduleNoteMemo.addEventListener('input', () => {
-      renderScheduleNotePreview(scheduleNoteMemo.value);
-    });
+    if (scheduleNotePhotoUrl) {
+      scheduleNotePhotoUrl.addEventListener('input', () => {
+        const inputUrl = normalizeExternalUrl(scheduleNotePhotoUrl.value);
+        if (inputUrl) {
+          renderSchedulePhotoPreview(inputUrl, '입력 중 미리보기');
+        } else if (currentScheduleNoteItem) {
+          refreshSchedulePhotoPreview(currentScheduleNoteItem);
+        } else {
+          renderSchedulePhotoPreview('', '사진 없음');
+        }
+      });
+    }
     openScheduleLinkBtn.addEventListener('click', openScheduleLinkNow);
     window.addEventListener('resize', requestScheduleMapHeightSync);
 
@@ -4537,9 +5160,14 @@
     });
     savePickedPlaceBtn.addEventListener('click', async () => {
       try {
-        await savePickedPlaceToTrip();
+        if (photoPickerMode === 'location') {
+          await saveSelectedLocationInfoToTrip();
+        } else {
+          await savePickedPlaceToTrip();
+        }
       } catch (error) {
         photoPickerStatus.textContent = error.message;
+        setLocationImportStatus(error.message);
       }
     });
     savePickedLocationBtn.addEventListener('click', async () => {

@@ -201,7 +201,12 @@ def _extract_user_memo_text(note_text: str) -> str:
     if memo_line:
         return memo_line.replace('[MEMO]', '', 1).strip()
 
-    filtered = [line for line in lines if not line.startswith('[PHOTO]') and not line.startswith('[LINK]')]
+    filtered = [
+        line for line in lines
+        if not line.startswith('[PHOTO]')
+        and not line.startswith('[LINK]')
+        and not line.startswith('[LOCATION_INFO_ID]')
+    ]
     return '\n'.join(filtered).strip() if filtered else text
 
 
@@ -1186,6 +1191,11 @@ def trip_feed_page():
         initial_data = {'countries': [], 'cities_by_country': {}}
     
     return render_template('trip_feed.html', initial_data=initial_data)
+
+
+@app.route('/ai-trip')
+def ai_trip_page():
+    return render_template('ai_trip.html')
 
 
 @app.route('/api/location-info/options', methods=['GET'])
