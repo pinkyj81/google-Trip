@@ -161,7 +161,7 @@
     }
     .feed-search-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 8px;
       align-items: center;
     }
@@ -479,6 +479,144 @@
       color: #4f7ea8;
       font-size: 13px;
     }
+    .register-filter-note {
+      margin: 0;
+      color: #2f628e;
+      font-size: 14px;
+    }
+    .register-form-grid {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .register-table-wrap {
+      margin-top: 12px;
+      border: 1px solid #cfe1f4;
+      border-radius: 12px;
+      background: #fafdff;
+      max-height: 340px;
+      overflow: auto;
+    }
+    .register-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      color: #1e4f81;
+      min-width: 920px;
+      table-layout: fixed;
+    }
+    .register-table th,
+    .register-table td {
+      border-bottom: 1px solid #deebf8;
+      padding: 7px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .register-table th {
+      position: sticky;
+      top: 0;
+      background: #e9f3ff;
+      color: #215689;
+      font-weight: 800;
+      z-index: 1;
+    }
+    .register-table .col-id {
+      width: 70px;
+      text-align: right;
+    }
+    .register-table th:nth-child(1),
+    .register-table td:nth-child(1) {
+      width: 90px;
+    }
+    .register-table th:nth-child(4),
+    .register-table td:nth-child(4) {
+      width: 44%;
+    }
+    .register-table th:nth-child(9),
+    .register-table td:nth-child(9) {
+      width: 56%;
+    }
+    .register-table th:nth-child(2),
+    .register-table th:nth-child(3),
+    .register-table th:nth-child(5),
+    .register-table th:nth-child(6),
+    .register-table th:nth-child(7),
+    .register-table th:nth-child(8),
+    .register-table td:nth-child(2),
+    .register-table td:nth-child(3),
+    .register-table td:nth-child(5),
+    .register-table td:nth-child(6),
+    .register-table td:nth-child(7),
+    .register-table td:nth-child(8) {
+      display: none;
+    }
+    .register-status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #3e6f9c;
+    }
+    .register-table th[data-register-col] {
+      cursor: pointer;
+    }
+    .register-table .register-col-selected {
+      background: #eaf4ff !important;
+    }
+    .register-table td[data-register-col-cell] {
+      padding: 0;
+    }
+    .register-table td[data-register-col-cell] input,
+    .register-table td[data-register-col-cell] textarea,
+    .register-table td[data-register-col-cell] select {
+      display: block;
+      width: 100%;
+      margin: 0;
+      border: 0 !important;
+      border-radius: 0;
+      background: transparent;
+      color: #1f4e7f;
+      padding: 10px 12px;
+      outline: none;
+      box-shadow: none;
+      font-family: inherit;
+      font-size: 15px;
+    }
+    .register-table td[data-register-col-cell] textarea {
+      min-height: 84px;
+      resize: vertical;
+    }
+    .register-inline-row {
+      background: #f2f8ff;
+    }
+    .register-inline-row input,
+    .register-inline-row select,
+    .register-inline-row textarea {
+      width: 100%;
+      border: 1px solid #bcd8f5;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #1f4e7f;
+      background: #ffffff;
+      font-family: inherit;
+    }
+    .register-inline-row textarea {
+      min-height: 56px;
+      resize: vertical;
+    }
+    .register-inline-save-btn {
+      width: 100%;
+      border: 1px solid #8fb8e6;
+      border-radius: 8px;
+      padding: 7px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #0f4f9a;
+      background: #dcecff;
+      cursor: pointer;
+    }
+    .register-inline-save-btn:hover {
+      background: #cfe4ff;
+    }
 
     @media (max-width: 700px) {
       .content-split {
@@ -643,6 +781,7 @@
           <div class="feed-search-row">
             <input id="feedKeyword" class="feed-search-input" type="text" placeholder="관광지/상세 설명 검색" />
             <button id="feedSearchBtn" type="button" class="page-link feed-search-btn">검색</button>
+            <button id="feedRegisterBtn" type="button" class="page-link feed-search-btn">등록</button>
           </div>
         </div>
       </div>
@@ -721,6 +860,44 @@
           <textarea id="feedEditDetail"></textarea>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="feedRegisterModal" class="edit-modal" hidden>
+    <div id="feedRegisterBackdrop" class="edit-modal-backdrop"></div>
+    <div class="edit-modal-panel" style="width: min(1100px, 100%);">
+      <div class="edit-modal-head">
+        <p class="edit-modal-title">SQL 등록</p>
+        <div style="display: flex; gap: 8px;">
+          <button id="feedRegisterCopyColBtn" type="button" class="page-link" style="box-shadow:none;">선택 열 복사</button>
+          <button id="feedRegisterSaveAllBtn" type="button" class="page-link" style="box-shadow:none;">전체 수정 저장</button>
+          <button id="feedRegisterReloadBtn" type="button" class="page-link" style="box-shadow:none;">다시 불러오기</button>
+          <button id="feedRegisterCloseBtn" type="button" class="edit-close-btn" aria-label="닫기">×</button>
+        </div>
+      </div>
+      <p id="feedRegisterFilterNote" class="register-filter-note">선택한 국가/도시 기준으로 데이터를 불러옵니다.</p>
+
+      <div class="register-table-wrap">
+        <table class="register-table">
+          <thead>
+            <tr>
+              <th class="col-id" data-register-col="id">ID</th>
+              <th data-register-col="country">국가</th>
+              <th data-register-col="city">도시</th>
+              <th data-register-col="attraction">관광지</th>
+              <th data-register-col="category">구분</th>
+              <th data-register-col="address">주소</th>
+              <th data-register-col="latitude">위도</th>
+              <th data-register-col="longitude">경도</th>
+              <th data-register-col="detail">상세 설명</th>
+            </tr>
+          </thead>
+          <tbody id="feedRegisterTableBody">
+            <tr><td colspan="9">데이터를 불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="feedRegisterStatus" class="register-status">대기 중</div>
     </div>
   </section>
 
@@ -1450,6 +1627,18 @@
     const feedEditDetailEl = document.getElementById('feedEditDetail');
     const feedEditSaveBtnEl = document.getElementById('feedEditSaveBtn');
     const feedEditCloseBtnEl = document.getElementById('feedEditCloseBtn');
+    const feedRegisterBtnEl = document.getElementById('feedRegisterBtn');
+    const feedRegisterModalEl = document.getElementById('feedRegisterModal');
+    const feedRegisterBackdropEl = document.getElementById('feedRegisterBackdrop');
+    const feedRegisterCloseBtnEl = document.getElementById('feedRegisterCloseBtn');
+    const feedRegisterCopyColBtnEl = document.getElementById('feedRegisterCopyColBtn');
+    const feedRegisterSaveAllBtnEl = document.getElementById('feedRegisterSaveAllBtn');
+    const feedRegisterReloadBtnEl = document.getElementById('feedRegisterReloadBtn');
+    const feedRegisterFilterNoteEl = document.getElementById('feedRegisterFilterNote');
+    const feedRegisterStatusEl = document.getElementById('feedRegisterStatus');
+    const feedRegisterTableBodyEl = document.getElementById('feedRegisterTableBody');
+    let registerItemsById = new Map();
+    let selectedRegisterColumn = 'attraction';
 
     function renderFeedCard(item) {
       const itemId = parseItemId(item.id);
@@ -1774,6 +1963,260 @@
       return !isNaN(num) ? num : null;
     }
 
+    function buildCategoryOptionsHtml(selectedValue) {
+      const values = ['', '랜드마크', '관광지', '맛집', '카페', '숙소', '쇼핑', '기타'];
+      return values.map((value) => {
+        const selected = value === selectedValue ? ' selected' : '';
+        const label = value || '구분';
+        return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
+      }).join('');
+    }
+
+    function renderRegisterTable(items) {
+      registerItemsById = new Map();
+      if (!Array.isArray(items) || !items.length) {
+        feedRegisterTableBodyEl.innerHTML = '<tr><td colspan="9">등록 데이터가 없습니다.</td></tr>';
+        setSelectedRegisterColumn(selectedRegisterColumn);
+        return;
+      }
+
+      const rowsHtml = items.map((item) => {
+        const id = item.id ?? '';
+        registerItemsById.set(String(id), item);
+        const country = escapeHtml(item.country || '');
+        const city = escapeHtml(item.city || '');
+        const attraction = escapeHtml(item.attraction || '');
+        const category = String(item.category || '');
+        const address = escapeHtml(item.address || '');
+        const latitude = item.latitude ?? '';
+        const longitude = item.longitude ?? '';
+        const detail = escapeHtml(item.detail || '');
+        return `
+          <tr data-register-row-id="${id}">
+            <td class="col-id" data-register-col-cell="id">${id}</td>
+            <td data-register-col-cell="country"><input data-register-field="country" data-register-id="${id}" value="${country}" /></td>
+            <td data-register-col-cell="city"><input data-register-field="city" data-register-id="${id}" value="${city}" /></td>
+            <td data-register-col-cell="attraction"><input data-register-field="attraction" data-register-id="${id}" value="${attraction}" /></td>
+            <td data-register-col-cell="category">
+              <select data-register-field="category" data-register-id="${id}">
+                ${buildCategoryOptionsHtml(category)}
+              </select>
+            </td>
+            <td data-register-col-cell="address"><input data-register-field="address" data-register-id="${id}" value="${address}" /></td>
+            <td data-register-col-cell="latitude"><input data-register-field="latitude" data-register-id="${id}" type="number" step="0.000001" value="${latitude}" /></td>
+            <td data-register-col-cell="longitude"><input data-register-field="longitude" data-register-id="${id}" type="number" step="0.000001" value="${longitude}" /></td>
+            <td data-register-col-cell="detail"><textarea data-register-field="detail" data-register-id="${id}">${detail}</textarea></td>
+          </tr>
+        `;
+      }).join('');
+
+      feedRegisterTableBodyEl.innerHTML = rowsHtml;
+      setSelectedRegisterColumn(selectedRegisterColumn);
+    }
+
+    function setSelectedRegisterColumn(field) {
+      const target = String(field || '').trim();
+      selectedRegisterColumn = target;
+      const headers = feedRegisterModalEl.querySelectorAll('th[data-register-col]');
+      headers.forEach((headerEl) => {
+        const isTarget = String(headerEl.getAttribute('data-register-col') || '') === target;
+        headerEl.classList.toggle('register-col-selected', isTarget);
+      });
+
+      const cells = feedRegisterTableBodyEl.querySelectorAll('td[data-register-col-cell]');
+      cells.forEach((cellEl) => {
+        const isTarget = String(cellEl.getAttribute('data-register-col-cell') || '') === target;
+        cellEl.classList.toggle('register-col-selected', isTarget);
+      });
+    }
+
+    function bindRegisterColumnHeaderEvents() {
+      const headers = feedRegisterModalEl.querySelectorAll('th[data-register-col]');
+      headers.forEach((headerEl) => {
+        headerEl.addEventListener('click', () => {
+          const col = String(headerEl.getAttribute('data-register-col') || '').trim();
+          if (!col) {
+            return;
+          }
+          setSelectedRegisterColumn(col);
+          feedRegisterStatusEl.textContent = `${headerEl.textContent?.trim() || ''} 열이 선택되었습니다.`;
+        });
+      });
+    }
+
+    function getRegisterColumnClipboardText(field) {
+      const col = String(field || '').trim();
+      if (!col) {
+        return '';
+      }
+
+      const rows = Array.from(feedRegisterTableBodyEl.querySelectorAll('tr[data-register-row-id]'));
+      if (!rows.length) {
+        return '';
+      }
+
+      const readValue = (id, key) => String(feedRegisterTableBodyEl.querySelector(`[data-register-field="${key}"][data-register-id="${id}"]`)?.value || '').trim();
+      const lines = rows.map((rowEl) => {
+        const rowId = String(rowEl.getAttribute('data-register-row-id') || '').trim();
+        if (col === 'id') {
+          return rowId;
+        }
+        return readValue(rowId, col);
+      });
+      return lines.join('\n');
+    }
+
+    async function copySelectedRegisterColumn() {
+      if (!selectedRegisterColumn) {
+        feedRegisterStatusEl.textContent = '복사할 열 헤더를 먼저 클릭하세요.';
+        return;
+      }
+
+      const text = getRegisterColumnClipboardText(selectedRegisterColumn);
+      if (!text) {
+        feedRegisterStatusEl.textContent = '선택한 열을 복사할 수 없습니다.';
+        return;
+      }
+
+      const headerEl = feedRegisterModalEl.querySelector(`th[data-register-col="${selectedRegisterColumn}"]`);
+      const colLabel = String(headerEl?.textContent || selectedRegisterColumn).trim();
+
+      try {
+        await navigator.clipboard.writeText(text);
+        feedRegisterStatusEl.textContent = `${colLabel} 열을 복사했습니다. (엑셀 붙여넣기 가능)`;
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        feedRegisterStatusEl.textContent = `${colLabel} 열을 복사했습니다. (엑셀 붙여넣기 가능)`;
+      }
+    }
+
+    async function saveAllRegisterEdits() {
+      const rows = Array.from(feedRegisterTableBodyEl.querySelectorAll('tr[data-register-row-id]'));
+      if (!rows.length) {
+        feedRegisterStatusEl.textContent = '수정할 데이터가 없습니다.';
+        return;
+      }
+
+      const readValue = (id, field) => String(feedRegisterTableBodyEl.querySelector(`[data-register-field="${field}"][data-register-id="${id}"]`)?.value || '').trim();
+      const updatePayloads = [];
+
+      for (const rowEl of rows) {
+        const rawId = String(rowEl.getAttribute('data-register-row-id') || '').trim();
+        const parsedId = parseItemId(rawId);
+        if (parsedId === null) {
+          feedRegisterStatusEl.textContent = `잘못된 ID 행이 있습니다: ${rawId}`;
+          return;
+        }
+
+        const country = readValue(rawId, 'country');
+        const city = readValue(rawId, 'city');
+        const attraction = readValue(rawId, 'attraction');
+        if (!country || !city || !attraction) {
+          feedRegisterStatusEl.textContent = `ID ${parsedId}: 국가/도시/관광지명은 필수입니다.`;
+          return;
+        }
+
+        const origin = registerItemsById.get(rawId) || {};
+        updatePayloads.push({
+          id: parsedId,
+          body: {
+            country,
+            city,
+            attraction,
+            category: readValue(rawId, 'category'),
+            address: readValue(rawId, 'address'),
+            latitude: readValue(rawId, 'latitude'),
+            longitude: readValue(rawId, 'longitude'),
+            detail: readValue(rawId, 'detail'),
+            image_url: String(origin.image_url || '').trim(),
+            maps_url: String(origin.maps_url || '').trim(),
+          },
+        });
+      }
+
+      feedRegisterSaveAllBtnEl.disabled = true;
+      feedRegisterStatusEl.textContent = `${updatePayloads.length}건 전체 수정 저장 중...`;
+
+      try {
+        for (const item of updatePayloads) {
+          const res = await fetch(`/api/location-info/${item.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.body),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(`ID ${item.id}: ${data.error || '저장 실패'}`);
+          }
+        }
+
+        feedRegisterStatusEl.textContent = `${updatePayloads.length}건 전체 수정 완료`;
+        await loadRegisterDataframe();
+        await loadComboOptions();
+        await loadFeedByLocation();
+      } catch (error) {
+        console.error(error);
+        feedRegisterStatusEl.textContent = `전체 수정 실패: ${error.message}`;
+      } finally {
+        feedRegisterSaveAllBtnEl.disabled = false;
+      }
+    }
+
+    async function loadRegisterDataframe() {
+      const country = (feedCountryEl.value || '').trim();
+      const city = (feedCityEl.value || '').trim();
+      const keyword = (feedKeywordEl.value || '').trim();
+
+      if (!country || !city) {
+        feedRegisterTableBodyEl.innerHTML = '<tr><td colspan="9">국가/도시를 먼저 선택하세요.</td></tr>';
+        feedRegisterStatusEl.textContent = '국가/도시 선택 필요';
+        return;
+      }
+
+      feedRegisterStatusEl.textContent = 'SQL 테이블 데이터를 불러오는 중...';
+      try {
+        const queryParts = [`country=${encodeURIComponent(country)}`, `city=${encodeURIComponent(city)}`];
+        if (keyword) {
+          queryParts.push(`keyword=${encodeURIComponent(keyword)}`);
+        }
+        const res = await fetch(`/api/location-info/list?${queryParts.join('&')}`, { cache: 'no-store' });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload.error || '목록 조회 실패');
+        }
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        renderRegisterTable(items);
+        feedRegisterStatusEl.textContent = `${items.length}건 로드 완료`;
+      } catch (error) {
+        console.error(error);
+        feedRegisterTableBodyEl.innerHTML = `<tr><td colspan="9">불러오기 실패: ${escapeHtml(error.message || '오류')}</td></tr>`;
+        feedRegisterStatusEl.textContent = '목록 조회 실패';
+      }
+    }
+
+    function openRegisterModal() {
+      const country = (feedCountryEl.value || '').trim();
+      const city = (feedCityEl.value || '').trim();
+      if (!country || !city) {
+        alert('국가와 도시를 먼저 선택하세요.');
+        return;
+      }
+      feedRegisterFilterNoteEl.textContent = `기준: ${country} / ${city} (검색어: ${(feedKeywordEl.value || '').trim() || '없음'})`;
+      feedRegisterModalEl.hidden = false;
+      loadRegisterDataframe();
+    }
+
+    function closeRegisterModal() {
+      feedRegisterModalEl.hidden = true;
+    }
+
     function openEditModal(item) {
       editingItemId = item.id;
       feedEditAttractionEl.value = item.attraction_name || '';
@@ -1864,6 +2307,25 @@
     feedEditModalBackdropEl.addEventListener('click', closeEditModal);
     feedEditCloseBtnEl.addEventListener('click', closeEditModal);
     feedEditSaveBtnEl.addEventListener('click', saveEditModal);
+    feedRegisterBtnEl.addEventListener('click', openRegisterModal);
+    feedRegisterCloseBtnEl.addEventListener('click', closeRegisterModal);
+    feedRegisterBackdropEl.addEventListener('click', closeRegisterModal);
+    feedRegisterCopyColBtnEl.addEventListener('click', copySelectedRegisterColumn);
+    feedRegisterSaveAllBtnEl.addEventListener('click', saveAllRegisterEdits);
+    feedRegisterReloadBtnEl.addEventListener('click', loadRegisterDataframe);
+    feedRegisterModalEl.addEventListener('keydown', (event) => {
+      const key = String(event.key || '').toLowerCase();
+      if (!(event.ctrlKey || event.metaKey) || key !== 'c') {
+        return;
+      }
+      const tagName = String(document.activeElement?.tagName || '').toUpperCase();
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+        return;
+      }
+      event.preventDefault();
+      copySelectedRegisterColumn();
+    });
+    bindRegisterColumnHeaderEvents();
 
     function updateCityOptions() {
       const selectedCountry = feedCountryEl.value;
