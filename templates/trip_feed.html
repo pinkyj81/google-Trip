@@ -870,6 +870,7 @@
         <p class="edit-modal-title">SQL 등록</p>
         <div style="display: flex; gap: 8px;">
           <button id="feedRegisterCopyColBtn" type="button" class="page-link" style="box-shadow:none;">선택 열 복사</button>
+          <button id="feedRegisterPasteColBtn" type="button" class="page-link" style="box-shadow:none;">선택 열 붙여넣기</button>
           <button id="feedRegisterSaveAllBtn" type="button" class="page-link" style="box-shadow:none;">전체 수정 저장</button>
           <button id="feedRegisterReloadBtn" type="button" class="page-link" style="box-shadow:none;">다시 불러오기</button>
           <button id="feedRegisterCloseBtn" type="button" class="edit-close-btn" aria-label="닫기">×</button>
@@ -898,6 +899,40 @@
         </table>
       </div>
       <div id="feedRegisterStatus" class="register-status">대기 중</div>
+
+      <div style="margin-top: 12px; border: 1px solid #bcd8f5; border-radius: 12px; padding: 12px; background: rgba(255, 255, 255, 0.78);">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+          <strong style="color: #1f5fb5;">TSV 붙여넣기</strong>
+          <span style="color: #5b7fa6; font-size: 13px;">형식: city / attraction / detail 또는 city / attraction</span>
+        </div>
+        <div style="display: grid; gap: 10px; width: 100%;">
+          <div>
+            <label for="feedRegisterTsvText" style="display: block; margin-bottom: 6px;">TSV 텍스트</label>
+            <textarea id="feedRegisterTsvText" rows="10" style="display: block; width: 100%; min-height: 220px; resize: vertical; border: 0; outline: none; box-shadow: none; background: transparent; padding-left: 0; padding-right: 0;" placeholder="퀼른\tWilly-Millowitsch-Denkmal\t설명 텍스트\n퀼른\tCologne View\t"></textarea>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+            <button id="feedRegisterTsvParseBtn" type="button" class="page-link" style="box-shadow:none;">TSV 파싱</button>
+            <button id="feedRegisterTsvSaveBtn" type="button" class="page-link" style="box-shadow:none;">저장</button>
+          </div>
+          <div id="feedRegisterTsvStatus" class="register-status">TSV를 붙여넣고 파싱하세요.</div>
+          <div style="max-height: 220px; overflow: auto; border: 1px solid #d3e3f3; border-radius: 10px; background: #fff;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: #eef6ff; color: #215689; text-align: left;">
+                  <th style="padding: 8px 10px; border-bottom: 1px solid #d8e7f7; width: 54px;">#</th>
+                  <th style="padding: 8px 10px; border-bottom: 1px solid #d8e7f7; width: 140px;">국가</th>
+                  <th style="padding: 8px 10px; border-bottom: 1px solid #d8e7f7; width: 140px;">도시</th>
+                  <th style="padding: 8px 10px; border-bottom: 1px solid #d8e7f7; width: 220px;">관광지</th>
+                  <th style="padding: 8px 10px; border-bottom: 1px solid #d8e7f7;">상세 설명</th>
+                </tr>
+              </thead>
+              <tbody id="feedRegisterTsvPreviewBody">
+                <tr><td colspan="5" style="padding: 14px 10px; color: #5b7fa6; text-align: center;">미리보기가 여기에 표시됩니다.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1321,8 +1356,6 @@
         return;
       }
 
-      feedPickerSaveBtnEl.disabled = true;
-      feedPickerNoteEl.textContent = `선택 ${selected.length}건 저장 중...`;
 
       let saved = 0;
       let duplicated = 0;
@@ -1632,13 +1665,279 @@
     const feedRegisterBackdropEl = document.getElementById('feedRegisterBackdrop');
     const feedRegisterCloseBtnEl = document.getElementById('feedRegisterCloseBtn');
     const feedRegisterCopyColBtnEl = document.getElementById('feedRegisterCopyColBtn');
+    const feedRegisterPasteColBtnEl = document.getElementById('feedRegisterPasteColBtn');
     const feedRegisterSaveAllBtnEl = document.getElementById('feedRegisterSaveAllBtn');
     const feedRegisterReloadBtnEl = document.getElementById('feedRegisterReloadBtn');
     const feedRegisterFilterNoteEl = document.getElementById('feedRegisterFilterNote');
     const feedRegisterStatusEl = document.getElementById('feedRegisterStatus');
     const feedRegisterTableBodyEl = document.getElementById('feedRegisterTableBody');
+    const feedRegisterTsvTextEl = document.getElementById('feedRegisterTsvText');
+    const feedRegisterTsvParseBtnEl = document.getElementById('feedRegisterTsvParseBtn');
+    const feedRegisterTsvSaveBtnEl = document.getElementById('feedRegisterTsvSaveBtn');
+    const feedRegisterTsvStatusEl = document.getElementById('feedRegisterTsvStatus');
+    const feedRegisterTsvPreviewBodyEl = document.getElementById('feedRegisterTsvPreviewBody');
     let registerItemsById = new Map();
     let selectedRegisterColumn = 'attraction';
+    let feedRegisterTsvRows = [];
+
+    function splitRegisterTsvLine(line) {
+      const text = String(line || '').trim();
+      if (!text) {
+        return [];
+      }
+
+      if (text.includes('\t')) {
+        return text.split('\t').map((value) => String(value || '').trim());
+      }
+
+      if (text.includes('|')) {
+        return text
+          .replace(/^\|/, '')
+          .replace(/\|$/, '')
+          .split('|')
+          .map((value) => String(value || '').trim())
+          .filter((value) => value !== '');
+      }
+
+      return [text];
+    }
+
+    function isRegisterTsvSeparatorLine(line) {
+      return /^[-\s|:]+$/.test(String(line || '').trim());
+    }
+
+    function parseRegisterTsvRows(text) {
+      const lines = String(text || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => Boolean(line) && !isRegisterTsvSeparatorLine(line));
+
+      if (!lines.length) {
+        return [];
+      }
+
+      const defaultCountry = String(feedCountryEl.value || '').trim();
+      const defaultCity = String(feedCityEl.value || '').trim();
+      const headerValues = splitRegisterTsvLine(lines[0]).map((value) => value.toLowerCase());
+      const hasHeader = headerValues.some((value) => ['country', 'city', 'attraction', 'detail', 'description', '설명'].includes(value));
+      const headerMap = new Map();
+
+      let startIndex = 0;
+      if (hasHeader) {
+        startIndex = 1;
+        headerValues.forEach((value, index) => {
+          if (value) {
+            headerMap.set(value, index);
+          }
+        });
+      }
+
+      const readByHeader = (cols, ...keys) => {
+        for (const key of keys) {
+          const index = headerMap.get(key);
+          if (typeof index === 'number' && cols[index] != null) {
+            return String(cols[index] || '').trim();
+          }
+        }
+        return '';
+      };
+
+      const rows = [];
+      for (let index = startIndex; index < lines.length; index += 1) {
+        const cols = splitRegisterTsvLine(lines[index]);
+        if (!cols.length) {
+          continue;
+        }
+
+        const normalizedFirst = String(cols[0] || '').trim().toLowerCase();
+        if (['#', 'no', 'num', 'number'].includes(normalizedFirst)) {
+          continue;
+        }
+
+        let country = defaultCountry;
+        let city = defaultCity;
+        let attraction = '';
+        let detail = '';
+
+        if (hasHeader) {
+          country = readByHeader(cols, 'country', '국가') || defaultCountry;
+          city = readByHeader(cols, 'city', '도시') || defaultCity;
+          attraction = readByHeader(cols, 'attraction', '관광지', 'name', '장소명');
+          detail = readByHeader(cols, 'detail', 'description', '설명', 'memo', '메모');
+        } else {
+          if (cols.length >= 3) {
+            [city, attraction, detail] = cols;
+          } else if (cols.length === 2) {
+            [city, attraction] = cols;
+          } else if (cols.length === 1) {
+            attraction = cols[0];
+          }
+        }
+
+        country = String(country || defaultCountry || '').trim();
+        city = String(city || defaultCity || '').trim();
+        attraction = String(attraction || '').trim();
+        detail = String(detail || '').trim();
+
+        if (!attraction) {
+          continue;
+        }
+
+        rows.push({ country, city, attraction, detail });
+      }
+
+      return rows;
+    }
+
+    function renderRegisterTsvPreview(rows) {
+      if (!Array.isArray(rows) || !rows.length) {
+        feedRegisterTsvPreviewBodyEl.innerHTML = '<tr><td colspan="5" style="padding: 14px 10px; color: #5b7fa6; text-align: center;">미리보기가 여기에 표시됩니다.</td></tr>';
+        return;
+      }
+
+      feedRegisterTsvPreviewBodyEl.innerHTML = rows.map((row, index) => `
+        <tr>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #edf3fa; vertical-align: top;">${index + 1}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #edf3fa; vertical-align: top;">${escapeHtml(row.country || '')}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #edf3fa; vertical-align: top;">${escapeHtml(row.city || '')}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #edf3fa; vertical-align: top; font-weight: 700; color: #1e5488;">${escapeHtml(row.attraction || '')}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #edf3fa; vertical-align: top;">${escapeHtml(row.detail || '')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function updateRegisterTsvStatus(message) {
+      feedRegisterTsvStatusEl.textContent = message;
+    }
+
+    function parseRegisterTsvPreview() {
+      feedRegisterTsvRows = parseRegisterTsvRows(feedRegisterTsvTextEl.value);
+      renderRegisterTsvPreview(feedRegisterTsvRows);
+
+      if (!feedRegisterTsvRows.length) {
+        updateRegisterTsvStatus('붙여넣은 TSV에서 저장할 행을 찾지 못했습니다.');
+        return feedRegisterTsvRows;
+      }
+
+      updateRegisterTsvStatus(`${feedRegisterTsvRows.length}개 행을 미리보기로 만들었습니다.`);
+      return feedRegisterTsvRows;
+    }
+
+    async function saveRegisterTsvRows() {
+      if (!feedRegisterTsvRows.length) {
+        parseRegisterTsvPreview();
+      }
+
+      if (!feedRegisterTsvRows.length) {
+        return;
+      }
+
+      const invalidRow = feedRegisterTsvRows.find((row) => !row.country || !row.city || !row.attraction);
+      if (invalidRow) {
+        updateRegisterTsvStatus('국가/도시/관광지명이 비어 있는 행이 있습니다. 현재 선택된 국가/도시를 확인하세요.');
+        return;
+      }
+
+      feedRegisterTsvSaveBtnEl.disabled = true;
+      updateRegisterTsvStatus(`저장 중...`);
+
+      let saved = 0;
+      let updated = 0;
+      let skipped = 0;
+      try {
+        const query = `country=${encodeURIComponent(feedRegisterTsvRows[0].country)}&city=${encodeURIComponent(feedRegisterTsvRows[0].city)}`;
+        const existingRes = await fetch(`/api/location-info/list?${query}`, { cache: 'no-store' });
+        const existingPayload = await existingRes.json().catch(() => ({}));
+        if (!existingRes.ok) {
+          throw new Error(existingPayload.error || '기존 데이터 조회 실패');
+        }
+
+        const existingItems = Array.isArray(existingPayload.items) ? existingPayload.items : [];
+        const existingMap = new Map(
+          existingItems.map((item) => [
+            [item.country, item.city, item.attraction].map((value) => String(value || '').trim().toLowerCase()).join('||'),
+            item,
+          ])
+        );
+        const seenKeys = new Set();
+
+        for (const row of feedRegisterTsvRows) {
+          const baseKey = [row.country, row.city, row.attraction].map((value) => String(value || '').trim().toLowerCase()).join('||');
+          const detailText = String(row.detail || '').trim();
+
+          if (seenKeys.has([baseKey, detailText.toLowerCase()].join('||'))) {
+            skipped += 1;
+            continue;
+          }
+          seenKeys.add([baseKey, detailText.toLowerCase()].join('||'));
+
+          const existingItem = existingMap.get(baseKey);
+          if (existingItem) {
+            const existingDetail = String(existingItem.detail || '').trim();
+            if (!existingDetail && detailText) {
+              const res = await fetch(`/api/location-info/${existingItem.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  country: row.country,
+                  city: row.city,
+                  attraction: row.attraction,
+                  detail: detailText,
+                  image_url: String(existingItem.image_url || ''),
+                  maps_url: String(existingItem.maps_url || ''),
+                  address: String(existingItem.address || ''),
+                  latitude: existingItem.latitude,
+                  longitude: existingItem.longitude,
+                  category: String(existingItem.category || ''),
+                }),
+              });
+              const payload = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                throw new Error(payload.error || '수정 실패');
+              }
+              updated += 1;
+              continue;
+            }
+
+            skipped += 1;
+            continue;
+          }
+
+          const res = await fetch('/api/location-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              country: row.country,
+              city: row.city,
+              attraction: row.attraction,
+              detail: detailText,
+              image_url: '',
+              maps_url: '',
+              address: '',
+              latitude: '',
+              longitude: '',
+              category: '관광지',
+            }),
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(payload.error || '저장 실패');
+          }
+          saved += 1;
+        }
+
+        updateRegisterTsvStatus(`저장 ${saved}건, 수정 ${updated}건, 건너뜀 ${skipped}건`);
+        feedRegisterStatusEl.textContent = `TSV 저장 완료: 저장 ${saved}건, 수정 ${updated}건, 건너뜀 ${skipped}건`;
+        await loadRegisterDataframe();
+      } catch (error) {
+        console.error(error);
+        updateRegisterTsvStatus(`TSV 저장 실패: ${error.message}`);
+      } finally {
+        feedRegisterTsvSaveBtnEl.disabled = false;
+      }
+    }
 
     function renderFeedCard(item) {
       const itemId = parseItemId(item.id);
@@ -2097,6 +2396,111 @@
       }
     }
 
+    function applyValuesToRegisterColumn(field, rawText) {
+      const col = String(field || '').trim();
+      if (!col) {
+        return { ok: false, message: '붙여넣기할 열 헤더를 먼저 클릭하세요.' };
+      }
+      if (col === 'id') {
+        return { ok: false, message: 'ID 열은 붙여넣기할 수 없습니다.' };
+      }
+
+      const rows = Array.from(feedRegisterTableBodyEl.querySelectorAll('tr[data-register-row-id]'));
+      if (!rows.length) {
+        return { ok: false, message: '붙여넣기할 데이터가 없습니다.' };
+      }
+
+      const normalized = String(rawText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const values = normalized.split('\n');
+      if (values.length && values[values.length - 1] === '') {
+        values.pop();
+      }
+
+      if (!values.length) {
+        return { ok: false, message: '클립보드 데이터가 비어 있습니다.' };
+      }
+
+      let appliedCount = 0;
+      rows.forEach((rowEl, index) => {
+        if (index >= values.length) {
+          return;
+        }
+
+        const rowId = String(rowEl.getAttribute('data-register-row-id') || '').trim();
+        const inputEl = feedRegisterTableBodyEl.querySelector(`[data-register-field="${col}"][data-register-id="${rowId}"]`);
+        if (!inputEl) {
+          return;
+        }
+
+        const nextValue = String(values[index] || '').split('\t')[0];
+        inputEl.value = nextValue;
+        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        appliedCount += 1;
+      });
+
+      if (!appliedCount) {
+        return { ok: false, message: '선택한 열에 값을 붙여넣지 못했습니다.' };
+      }
+
+      return { ok: true, count: appliedCount };
+    }
+
+    async function pasteSelectedRegisterColumn() {
+      if (!selectedRegisterColumn) {
+        feedRegisterStatusEl.textContent = '붙여넣기할 열 헤더를 먼저 클릭하세요.';
+        return;
+      }
+
+      const headerEl = feedRegisterModalEl.querySelector(`th[data-register-col="${selectedRegisterColumn}"]`);
+      const colLabel = String(headerEl?.textContent || selectedRegisterColumn).trim();
+
+      try {
+        const text = await navigator.clipboard.readText();
+        const result = applyValuesToRegisterColumn(selectedRegisterColumn, text);
+        if (!result.ok) {
+          feedRegisterStatusEl.textContent = result.message;
+          return;
+        }
+        feedRegisterStatusEl.textContent = `${colLabel} 열에 ${result.count}개 행을 붙여넣었습니다.`;
+      } catch {
+        feedRegisterStatusEl.textContent = '브라우저 권한 제한으로 버튼 붙여넣기는 실패했습니다. 표 바깥을 클릭한 뒤 Ctrl+V로 붙여넣으세요.';
+      }
+    }
+
+    function handleRegisterColumnPaste(event) {
+      const isMod = event.ctrlKey || event.metaKey;
+      const key = String(event.key || '').toLowerCase();
+      const byShortcut = isMod && key === 'v';
+      const byPasteEvent = event.type === 'paste';
+      if (!byShortcut && !byPasteEvent) {
+        return;
+      }
+
+      const tagName = String(document.activeElement?.tagName || '').toUpperCase();
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+        return;
+      }
+
+      const text = String(event.clipboardData?.getData('text/plain') || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      if (!text.trim()) {
+        if (byShortcut) {
+          pasteSelectedRegisterColumn();
+        }
+        return;
+      }
+
+      event.preventDefault();
+      const headerEl = feedRegisterModalEl.querySelector(`th[data-register-col="${selectedRegisterColumn}"]`);
+      const colLabel = String(headerEl?.textContent || selectedRegisterColumn).trim();
+      const result = applyValuesToRegisterColumn(selectedRegisterColumn, text);
+      if (!result.ok) {
+        feedRegisterStatusEl.textContent = result.message;
+        return;
+      }
+      feedRegisterStatusEl.textContent = `${colLabel} 열에 ${result.count}개 행을 붙여넣었습니다.`;
+    }
+
     async function saveAllRegisterEdits() {
       const rows = Array.from(feedRegisterTableBodyEl.querySelectorAll('tr[data-register-row-id]'));
       if (!rows.length) {
@@ -2209,6 +2613,10 @@
         return;
       }
       feedRegisterFilterNoteEl.textContent = `기준: ${country} / ${city} (검색어: ${(feedKeywordEl.value || '').trim() || '없음'})`;
+      feedRegisterTsvTextEl.value = '';
+      feedRegisterTsvRows = [];
+      renderRegisterTsvPreview(feedRegisterTsvRows);
+      updateRegisterTsvStatus('현재 선택된 국가/도시 기준으로 TSV를 붙여넣고 파싱하세요.');
       feedRegisterModalEl.hidden = false;
       loadRegisterDataframe();
     }
@@ -2311,20 +2719,28 @@
     feedRegisterCloseBtnEl.addEventListener('click', closeRegisterModal);
     feedRegisterBackdropEl.addEventListener('click', closeRegisterModal);
     feedRegisterCopyColBtnEl.addEventListener('click', copySelectedRegisterColumn);
+    feedRegisterPasteColBtnEl.addEventListener('click', pasteSelectedRegisterColumn);
     feedRegisterSaveAllBtnEl.addEventListener('click', saveAllRegisterEdits);
     feedRegisterReloadBtnEl.addEventListener('click', loadRegisterDataframe);
+    feedRegisterTsvParseBtnEl.addEventListener('click', parseRegisterTsvPreview);
+    feedRegisterTsvSaveBtnEl.addEventListener('click', saveRegisterTsvRows);
     feedRegisterModalEl.addEventListener('keydown', (event) => {
       const key = String(event.key || '').toLowerCase();
-      if (!(event.ctrlKey || event.metaKey) || key !== 'c') {
+      if (!(event.ctrlKey || event.metaKey) || (key !== 'c' && key !== 'v')) {
         return;
       }
-      const tagName = String(document.activeElement?.tagName || '').toUpperCase();
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
-        return;
+      if (key === 'c') {
+        const tagName = String(document.activeElement?.tagName || '').toUpperCase();
+        if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+          return;
+        }
+        event.preventDefault();
+        copySelectedRegisterColumn();
+      } else {
+        handleRegisterColumnPaste(event);
       }
-      event.preventDefault();
-      copySelectedRegisterColumn();
     });
+    feedRegisterModalEl.addEventListener('paste', handleRegisterColumnPaste);
     bindRegisterColumnHeaderEvents();
 
     function updateCityOptions() {
